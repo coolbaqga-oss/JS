@@ -168,21 +168,78 @@
 
   .stamp {
     position: absolute; top: 16px; right: 16px;
-    width: 46px; height: 46px;
+    width: 46px; height: 46px; z-index: 2;
     display: flex; align-items: center; justify-content: center;
     font-family: 'Gowun Batang', serif; font-weight: 700; font-size: .74rem;
     text-align: center; line-height: 1.25; letter-spacing: .06em;
     transform: rotate(7deg); writing-mode: vertical-rl;
+  }
+  /* 잉크 번짐 질감 */
+  .stamp.visited, .stamp.best, .stamp.double::after {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='46' height='46'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='2'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0.75'/%3E%3C/filter%3E%3Crect width='46' height='46' filter='url(%23g)'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='46' height='46'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='2'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0.75'/%3E%3C/filter%3E%3Crect width='46' height='46' filter='url(%23g)'/%3E%3C/svg%3E");
+    -webkit-mask-size: cover; mask-size: cover;
   }
   .stamp.visited {
     color: #fff; background: var(--seal);
     border-radius: 9px 11px 8px 12px / 11px 8px 12px 9px;
     box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3.5px var(--seal-deep), 0 2px 6px rgba(217,72,59,.3);
   }
+  /* 2회 방문 : 도장이 한 번 더 겹쳐 찍힘 */
+  .stamp.double::after {
+    content: '다녀옴'; position: absolute; inset: 0; z-index: -1;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; background: var(--seal); opacity: .4;
+    border-radius: 9px 11px 8px 12px / 11px 8px 12px 9px;
+    transform: translate(-9px, 7px) rotate(-16deg);
+  }
+  /* 3회 이상 : 보장맛집 금색 낙관 */
+  .stamp.best {
+    width: 50px; height: 50px; top: 14px; right: 14px;
+    color: #fff; background: linear-gradient(150deg, #d4a437, #b8862a);
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3.5px #97690f, 0 2px 8px rgba(184,134,42,.45);
+    font-size: .68rem;
+  }
   .stamp.wish {
     color: var(--wish); border: 2px dashed #a9c3d8; border-radius: 50%;
     background: var(--wish-soft);
   }
+  /* 도장 쾅! 애니메이션 */
+  @keyframes stampIn {
+    0%   { transform: rotate(7deg) scale(2.6); opacity: 0; }
+    55%  { transform: rotate(7deg) scale(.88); opacity: 1; }
+    75%  { transform: rotate(7deg) scale(1.06); }
+    100% { transform: rotate(7deg) scale(1); }
+  }
+  .stamp.slam { animation: stampIn .5s cubic-bezier(.2,1.2,.4,1) both; }
+  @media (prefers-reduced-motion: reduce) { .stamp.slam { animation: none; } }
+
+  /* 카드 접기/펼치기 */
+  .card { cursor: pointer; }
+  .card-details { display: none; }
+  .card.open .card-details { display: block; }
+  .chev {
+    position: absolute; bottom: 10px; right: 16px; font-size: .72rem; color: #d5c8b8;
+    transition: transform .2s;
+  }
+  .card.open .chev { transform: rotate(180deg); }
+  .again-tag {
+    font-size: .71rem; padding: 2px 9px; border-radius: 999px;
+    background: var(--wish-soft); color: var(--wish); font-weight: 500;
+  }
+  .visit-badge {
+    font-size: .71rem; padding: 2px 9px; border-radius: 999px;
+    background: var(--seal-soft); color: var(--seal-deep); font-weight: 500;
+  }
+  .counter { display: flex; align-items: center; gap: 12px; }
+  .counter button {
+    width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--card-border);
+    background: var(--card); font-size: 1.2rem; cursor: pointer; color: var(--ink-soft);
+    font-family: inherit; transition: all .15s;
+  }
+  .counter button:hover { border-color: var(--seal); color: var(--seal); }
+  .counter .cnt-num { font-family: 'Gowun Batang', serif; font-size: 1.3rem; font-weight: 700; min-width: 40px; text-align: center; }
 
   .ratings { margin-top: 10px; display: flex; gap: 14px; flex-wrap: wrap; font-size: .88rem; }
   .rating-line { display: flex; align-items: center; gap: 6px; }
@@ -331,6 +388,7 @@
         <button class="chip on" data-f="all" onclick="setFilter('all')">전체</button>
         <button class="chip c-seal" data-f="visited" onclick="setFilter('visited')">도장 찍은 곳</button>
         <button class="chip c-wish" data-f="wish" onclick="setFilter('wish')">가고 싶은 곳</button>
+        <button class="chip c-wish" data-f="again" onclick="setFilter('again')">💙 또 가자</button>
         <button class="chip c-gold" data-f="special" onclick="setFilter('special')">특별한 날</button>
       </div>
     </div>
@@ -439,6 +497,23 @@
           <div class="star-pick" id="starsB"></div>
         </div>
       </div>
+      <div class="row2">
+        <div class="field">
+          <label>방문 횟수</label>
+          <div class="counter">
+            <button type="button" onclick="bumpVisits(-1)">−</button>
+            <span class="cnt-num" id="visitsNum">1</span>
+            <button type="button" onclick="bumpVisits(1)">+</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div class="check-row" style="padding-top:9px">
+            <input type="checkbox" id="fAgain" style="accent-color:var(--wish)">
+            <label for="fAgain" style="margin:0;cursor:pointer;">💙 또 가고 싶은 집</label>
+          </div>
+        </div>
+      </div>
       <div class="field">
         <label>방문 날짜</label>
         <input type="date" id="fDate">
@@ -491,7 +566,7 @@
     <h2>우리 이름 설정</h2>
     <div class="row2">
       <div class="field"><label>첫 번째 사람</label><input type="text" id="nameA" placeholder="예) 종훈"></div>
-      <div class="field"><label>두 번째 사람</label><input type="text" id="nameB" placeholder="예) 청순귀요미"></div>
+      <div class="field"><label>두 번째 사람</label><input type="text" id="nameB" placeholder="예) 소영"></div>
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeNames()">취소</button>
@@ -507,8 +582,8 @@
    ① 여기 두 줄만 채우면 돼!
    Supabase → Project Settings → API 에서 복사
    ═══════════════════════════════════════════ */
-const SUPABASE_URL = 'https://lnltkzlovnhcqqzzuqzv.supabase.co';       // 예: https://abcdefgh.supabase.co
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxubHRremxvdm5oY3Fxenp1cXp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5MTE0NzQsImV4cCI6MjA5OTQ4NzQ3NH0.NnMuZdxjLho72Y5Q1XRW7oqD0_NgrCNq21O6FwO3mhs'; // 예: eyJhbGciOi...
+const SUPABASE_URL = '여기에_프로젝트_URL';       // 예: https://abcdefgh.supabase.co
+const SUPABASE_ANON_KEY = '여기에_anon_public_키'; // 예: eyJhbGciOi...
 
 const CAT_EMOJI = {'한식':'🍚','중식':'🥟','일식':'🍣','양식':'🍝','분식':'🌶','고기':'🥩','회·해산물':'🐟','카페·디저트':'☕','술집':'🍶','기타':'🍽'};
 const GYEONGGI = /(수원|성남|고양|용인|부천|안산|안양|남양주|화성|평택|의정부|시흥|파주|김포|광명|광주시|군포|하남|오산|이천|안성|의왕|양주|구리|포천|동두천|과천|여주|양평|가평|연천)/;
@@ -547,6 +622,7 @@ function rowToPlace(r) {
     id: r.id, name: r.name, city: r.city || '서울', region: r.region || '',
     cat: r.cat || '기타', status: r.status || 'wish',
     rateA: r.rate_a || 0, rateB: r.rate_b || 0,
+    visits: r.visits ?? 1, again: !!r.again,
     date: r.visit_date || '', special: !!r.special, specialNote: r.special_note || '',
     memo: r.memo || '', menu: r.menu || '', naverUrl: r.naver_url || '',
     photo: r.photo || null,
@@ -557,6 +633,7 @@ function placeToRow(p) {
   return {
     name: p.name, city: p.city, region: p.region, cat: p.cat, status: p.status,
     rate_a: p.rateA, rate_b: p.rateB,
+    visits: p.visits, again: p.again,
     visit_date: p.date || null,
     special: p.special, special_note: p.specialNote,
     memo: p.memo, menu: p.menu, naver_url: p.naverUrl, photo: p.photo
@@ -640,11 +717,25 @@ function placeLink(p) {
 }
 function esc(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+let openCards = new Set();
+let slamId = null;
+
+function stampOf(p) {
+  if (p.status !== 'visited') return { cls: 'wish', txt: '가보자' };
+  if (p.visits >= 3) return { cls: 'visited best', txt: '보장맛집' };
+  if (p.visits === 2) return { cls: 'visited double', txt: '다녀옴' };
+  return { cls: 'visited', txt: '다녀옴' };
+}
+
 function cardHTML(p) {
+  const st = stampOf(p);
+  const slam = p.id === slamId ? ' slam' : '';
+  const open = openCards.has(p.id) ? ' open' : '';
+  const a = avg(p);
   return `
-    <div class="card ${p.special?'special':''}">
+    <div class="card ${p.special?'special':''}${open}" onclick="toggleCard(event,'${p.id}')">
       ${p.special?`<div class="special-tag">💛 ${esc(p.specialNote||'특별한 날')}</div>`:''}
-      <div class="stamp ${p.status}">${p.status==='visited'?'다녀옴':'가보자'}</div>
+      <div class="stamp ${st.cls}${slam}">${st.txt}</div>
       <div class="card-body">
         <div class="thumb">${p.photo?`<img src="${p.photo}" alt="">`:(CAT_EMOJI[p.cat]||'🍽')}</div>
         <div class="card-main">
@@ -652,24 +743,40 @@ function cardHTML(p) {
           <div class="meta">
             <span>📍 ${esc(p.city)}${p.region?' · '+esc(p.region):''}</span>
             <span class="badge">${esc(p.cat)}</span>
-            ${p.date?`<span>${p.date}</span>`:''}
+            ${p.status==='visited' && a ? `<span class="stars" style="font-size:.78rem">★ ${a.toFixed(1)}</span>` : ''}
+            ${p.status==='visited' && p.visits>1 ? `<span class="visit-badge">${p.visits}회 방문</span>` : ''}
+            ${p.again ? `<span class="again-tag">💙 또 가자</span>` : ''}
           </div>
-          ${p.status==='visited'?`
-          <div class="ratings">
-            <div class="rating-line"><span class="who">${esc(db.nameA)}</span><span class="stars">${starStr(p.rateA)}</span></div>
-            <div class="rating-line"><span class="who">${esc(db.nameB)}</span><span class="stars">${starStr(p.rateB)}</span></div>
-          </div>`:''}
-          ${p.menu?`<div class="menu-tags">${p.menu.split(',').map(m=>m.trim()).filter(Boolean).map(m=>`<span class="menu-tag">🍽 ${esc(m)}</span>`).join('')}</div>`:''}
-          ${p.memo?`<div class="memo">${esc(p.memo)}</div>`:''}
+          <div class="card-details">
+            ${p.status==='visited'?`
+            <div class="ratings">
+              <div class="rating-line"><span class="who">${esc(db.nameA)}</span><span class="stars">${starStr(p.rateA)}</span></div>
+              <div class="rating-line"><span class="who">${esc(db.nameB)}</span><span class="stars">${starStr(p.rateB)}</span></div>
+            </div>`:''}
+            ${p.date?`<div class="meta" style="margin-top:8px"><span>🗓 마지막 방문 ${p.date}</span></div>`:''}
+            ${p.menu?`<div class="menu-tags">${p.menu.split(',').map(m=>m.trim()).filter(Boolean).map(m=>`<span class="menu-tag">🍽 ${esc(m)}</span>`).join('')}</div>`:''}
+            ${p.memo?`<div class="memo">${esc(p.memo)}</div>`:''}
+          </div>
         </div>
       </div>
-      <div class="card-actions">
-        <a class="btn naver" href="${esc(placeLink(p))}" target="_blank" rel="noopener">🟢 네이버지도</a>
-        ${p.status==='wish'?`<button class="btn stamp-it" onclick="markVisited('${p.id}')">🔴 도장 찍기</button>`:''}
-        <button class="btn" onclick="openForm('${p.id}')">수정</button>
-        <button class="btn danger" onclick="removePlace('${p.id}')">삭제</button>
+      <div class="card-details">
+        <div class="card-actions">
+          <a class="btn naver" href="${esc(placeLink(p))}" target="_blank" rel="noopener">🟢 네이버지도</a>
+          ${p.status==='wish'
+            ? `<button class="btn stamp-it" onclick="markVisited('${p.id}')">🔴 도장 찍기</button>`
+            : `<button class="btn stamp-it" onclick="addVisit('${p.id}')">🔴 또 왔어요</button>`}
+          <button class="btn" onclick="openForm('${p.id}')">수정</button>
+          <button class="btn danger" onclick="removePlace('${p.id}')">삭제</button>
+        </div>
       </div>
+      <div class="chev">▼</div>
     </div>`;
+}
+
+function toggleCard(ev, id) {
+  if (ev.target.closest('button, a, input')) return;
+  if (openCards.has(id)) openCards.delete(id); else openCards.add(id);
+  render();
 }
 
 function render() {
@@ -702,6 +809,7 @@ function render() {
   let items = db.places.filter(p => {
     if (filter === 'visited' && p.status !== 'visited') return false;
     if (filter === 'wish' && p.status !== 'wish') return false;
+    if (filter === 'again' && !(p.status === 'visited' && p.again)) return false;
     if (filter === 'special' && !p.special) return false;
     if (cityFilter && p.city !== cityFilter) return false;
     if (guFilter && guOf(p) !== guFilter) return false;
@@ -781,6 +889,12 @@ function removePhoto() {
 }
 
 /* ── 폼 ── */
+let formVisits = 1;
+function bumpVisits(d) {
+  formVisits = Math.max(1, Math.min(99, formVisits + d));
+  $('visitsNum').textContent = formVisits;
+}
+
 function openForm(id) {
   editingId = id || null;
   const p = id ? db.places.find(x=>x.id===id) : null;
@@ -796,6 +910,9 @@ function openForm(id) {
   $('fSpecial').checked = !!p?.special;
   $('fSpecialNote').value = p?.specialNote || '';
   $('specialNoteField').style.display = p?.special ? 'block' : 'none';
+  $('fAgain').checked = !!p?.again;
+  formVisits = p?.visits || 1;
+  $('visitsNum').textContent = formVisits;
   formRateA = p?.rateA || 0;
   formRateB = p?.rateB || 0;
   formPhoto = p?.photo || null;
@@ -851,6 +968,8 @@ async function saveForm() {
     status: formStatus,
     rateA: formStatus==='visited' ? formRateA : 0,
     rateB: formStatus==='visited' ? formRateB : 0,
+    visits: formStatus==='visited' ? formVisits : 1,
+    again: formStatus==='visited' && $('fAgain').checked,
     date: formStatus==='visited' ? $('fDate').value : '',
     special: formStatus==='visited' && $('fSpecial').checked,
     specialNote: $('fSpecialNote').value.trim(),
@@ -870,12 +989,28 @@ async function saveForm() {
 
 async function markVisited(id) {
   const { error } = await sb.from('places')
-    .update({ status: 'visited', visit_date: new Date().toISOString().slice(0,10) })
+    .update({ status: 'visited', visits: 1, visit_date: new Date().toISOString().slice(0,10) })
     .eq('id', id);
   if (error) { toast('저장에 실패했어요'); return; }
+  slamId = id;
+  openCards.add(id);
   toast('🔴 도장 찍었어요!');
   await fetchAll();
+  slamId = null;
   openForm(id);
+}
+
+async function addVisit(id) {
+  const p = db.places.find(x=>x.id===id);
+  const newVisits = (p.visits || 1) + 1;
+  const { error } = await sb.from('places')
+    .update({ visits: newVisits, visit_date: new Date().toISOString().slice(0,10) })
+    .eq('id', id);
+  if (error) { toast('저장에 실패했어요'); return; }
+  slamId = id;
+  toast(newVisits === 3 ? '⭐ 보장맛집 등극!' : `🔴 ${newVisits}번째 도장!`);
+  await fetchAll();
+  slamId = null;
 }
 
 async function removePlace(id) {
