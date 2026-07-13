@@ -158,7 +158,7 @@
     font-size: 2rem; overflow: hidden; user-select: none;
   }
   .thumb img { width: 100%; height: 100%; object-fit: cover; }
-  .card-main { flex: 1; min-width: 0; padding-right: 54px; }
+  .card-main { flex: 1; min-width: 0; padding-right: 74px; }
   .card h3 {
     font-family: 'Gowun Batang', serif; font-size: 1.16rem; line-height: 1.3;
     word-break: keep-all;
@@ -167,34 +167,23 @@
   .badge { font-size: .71rem; padding: 2px 9px; border-radius: 999px; background: #f8f1ea; color: #8a7460; }
 
   .stamp {
-    position: absolute; top: 14px; right: 14px;
-    width: 52px; height: 52px; z-index: 2;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    font-family: 'Gowun Batang', serif; font-weight: 700; font-size: .72rem;
-    text-align: center; line-height: 1.2; letter-spacing: .04em;
+    position: absolute; top: 12px; right: 12px;
+    width: 68px; height: 68px; z-index: 2;
+    display: flex; align-items: center; justify-content: center;
     transform: rotate(-8deg);
   }
-  /* 잉크 번짐 질감 */
-  .stamp.visited, .stamp.best {
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='52'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='2'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0.75'/%3E%3C/filter%3E%3Crect width='52' height='52' filter='url(%23g)'/%3E%3C/svg%3E");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='52'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='2'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0.75'/%3E%3C/filter%3E%3Crect width='52' height='52' filter='url(%23g)'/%3E%3C/svg%3E");
+  /* 잉크 번짐 질감 (SVG 도장 전체에 적용) */
+  .stamp.ink {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='68' height='68'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='2'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.45 0.8'/%3E%3C/filter%3E%3Crect width='68' height='68' filter='url(%23g)'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='68' height='68'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='2'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.45 0.8'/%3E%3C/filter%3E%3Crect width='68' height='68' filter='url(%23g)'/%3E%3C/svg%3E");
     -webkit-mask-size: cover; mask-size: cover;
   }
-  /* 다녀옴 : 원형 빨간 스탬프 */
-  .stamp.visited {
-    color: #fff; background: var(--seal); border-radius: 50%;
-    box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3.5px var(--seal-deep), 0 2px 6px rgba(217,72,59,.3);
-  }
-  .stamp .x2 { font-size: .66rem; line-height: 1; margin-top: 1px; opacity: .95; }
-  /* 3회 이상 : 보장맛집 금색 스탬프 */
-  .stamp.best {
-    color: #fff; background: linear-gradient(150deg, #d4a437, #b8862a);
-    border-radius: 50%; font-size: .68rem;
-    box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3.5px #97690f, 0 2px 8px rgba(184,134,42,.45);
-  }
+  .stamp svg { width: 100%; height: 100%; overflow: visible; }
   .stamp.wish {
+    width: 52px; height: 52px; top: 16px; right: 16px;
     color: var(--wish); border: 2px dashed #a9c3d8; border-radius: 50%;
     background: var(--wish-soft);
+    font-family: 'Gowun Batang', serif; font-weight: 700; font-size: .72rem;
   }
   /* 도장 쾅! 애니메이션 */
   @keyframes stampIn {
@@ -713,9 +702,36 @@ let slamId = null;
 
 function stampOf(p) {
   if (p.status !== 'visited') return { cls: 'wish', txt: '가보자' };
-  if (p.visits >= 3) return { cls: 'visited best', txt: '보장<br>맛집' };
-  if (p.visits >= 2) return { cls: 'visited', txt: `다녀옴<span class="x2">×${p.visits}</span>` };
-  return { cls: 'visited', txt: '다녀옴' };
+
+  const visits = p.visits || 1;
+  let color, arcTop, main, icon;
+  if (visits >= 3)      { color = '#c0392b'; arcTop = 'CERTIFIED'; main = '맛집 보장'; icon = '★'; }
+  else if (visits === 2){ color = '#3f6fa8'; arcTop = 'REVISITED'; main = '또 왔네';  icon = '⟳'; }
+  else                  { color = '#77736c'; arcTop = 'VISITED';   main = '다녀옴';   icon = '✓'; }
+
+  const date = (p.date || '').replace(/-/g, '.');
+  const uid = 'st' + String(p.id).replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
+
+  const svg = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <path id="${uid}t" d="M 9,50 A 41,41 0 0 1 91,50"/>
+      <path id="${uid}b" d="M 91,50 A 41,41 0 0 1 9,50"/>
+    </defs>
+    <circle cx="50" cy="50" r="47" fill="none" stroke="${color}" stroke-width="3"/>
+    <circle cx="50" cy="50" r="35" fill="none" stroke="${color}" stroke-width="1.4"/>
+    <text font-size="10" font-weight="700" letter-spacing="2" fill="${color}" font-family="Arial, sans-serif">
+      <textPath href="#${uid}t" startOffset="50%" text-anchor="middle">${arcTop}</textPath>
+    </text>
+    <text font-size="9" font-weight="700" letter-spacing="2" fill="${color}" font-family="Arial, sans-serif">
+      <textPath href="#${uid}b" startOffset="50%" text-anchor="middle">GOOD PLACE</textPath>
+    </text>
+    <text x="50" y="37" text-anchor="middle" font-size="15" font-weight="700" fill="${color}">${icon}</text>
+    <text x="50" y="57" text-anchor="middle" font-size="15" font-weight="800" fill="${color}"
+      font-family="'Gowun Batang', serif">${main}</text>
+    ${date ? `<text x="50" y="70" text-anchor="middle" font-size="8" letter-spacing="1" fill="${color}" font-family="Arial, sans-serif">${date}</text>` : ''}
+  </svg>`;
+
+  return { cls: 'ink', txt: svg };
 }
 
 function cardHTML(p) {
