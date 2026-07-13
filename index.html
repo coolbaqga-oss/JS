@@ -5,10 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>맛집 대동여지도</title>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
-    --bg-top: #fffaf6;
-    --bg-bot: #fceee4;
     --card: #ffffff;
     --card-border: #f0dfd2;
     --ink: #35302b;
@@ -69,18 +68,14 @@
   .names .heart { color: var(--seal); font-size: .8rem; }
 
   /* ═══ 통계 ═══ */
-  .stats {
-    display: flex; gap: 10px; margin: 24px auto 6px; max-width: 480px;
-  }
+  .stats { display: flex; gap: 10px; margin: 24px auto 6px; max-width: 480px; }
   .stat {
     flex: 1; text-align: center; padding: 15px 4px 13px;
     background: var(--card); border: 1px solid var(--card-border);
     border-radius: 18px; cursor: pointer; transition: all .18s; box-shadow: var(--shadow);
     position: relative; overflow: hidden;
   }
-  .stat::after {
-    content: ''; position: absolute; top: 0; left: 20%; right: 20%; height: 3px; border-radius: 0 0 6px 6px;
-  }
+  .stat::after { content: ''; position: absolute; top: 0; left: 20%; right: 20%; height: 3px; border-radius: 0 0 6px 6px; }
   .stat.s-visited::after { background: var(--seal); }
   .stat.s-wish::after { background: var(--wish); }
   .stat.s-special::after { background: var(--gold); }
@@ -169,12 +164,8 @@
     word-break: keep-all;
   }
   .meta { margin-top: 6px; font-size: .79rem; color: var(--ink-soft); display: flex; gap: 5px 9px; flex-wrap: wrap; align-items: center; }
-  .badge {
-    font-size: .71rem; padding: 2px 9px; border-radius: 999px;
-    background: #f8f1ea; color: #8a7460;
-  }
+  .badge { font-size: .71rem; padding: 2px 9px; border-radius: 999px; background: #f8f1ea; color: #8a7460; }
 
-  /* 낙관 도장 */
   .stamp {
     position: absolute; top: 16px; right: 16px;
     width: 46px; height: 46px;
@@ -195,10 +186,7 @@
 
   .ratings { margin-top: 10px; display: flex; gap: 14px; flex-wrap: wrap; font-size: .88rem; }
   .rating-line { display: flex; align-items: center; gap: 6px; }
-  .rating-line .who {
-    color: #8a7460; font-size: .74rem; background: #f8f1ea;
-    border-radius: 999px; padding: 2px 9px;
-  }
+  .rating-line .who { color: #8a7460; font-size: .74rem; background: #f8f1ea; border-radius: 999px; padding: 2px 9px; }
   .stars { color: var(--gold); letter-spacing: 1.5px; font-size: .92rem; }
   .stars .off { color: #e8ddd0; }
 
@@ -228,7 +216,6 @@
   .btn.stamp-it { border-color: #f0c3bd; color: var(--seal); background: var(--seal-soft); }
   .btn.stamp-it:hover { background: var(--seal); color: #fff; border-color: var(--seal); }
 
-  /* ═══ 빈 상태 ═══ */
   .empty { text-align: center; padding: 70px 20px; color: var(--ink-soft); }
   .empty .mark {
     width: 78px; height: 78px; margin: 0 auto 16px; background: var(--card);
@@ -237,7 +224,6 @@
   }
   .empty .big { font-family: 'Gowun Batang', serif; font-size: 1.15rem; margin-bottom: 6px; color: var(--ink); }
 
-  /* ═══ 추가 버튼 ═══ */
   .add-btn {
     position: fixed; right: 20px; bottom: 24px; z-index: 50;
     height: 56px; padding: 0 24px 0 19px; border-radius: 999px;
@@ -249,7 +235,6 @@
   .add-btn:hover { transform: scale(1.04); }
   .add-btn .plus { font-size: 1.4rem; line-height: 1; }
 
-  /* ═══ 모달 ═══ */
   .overlay {
     position: fixed; inset: 0; background: rgba(53,48,43,.45);
     display: none; align-items: flex-end; justify-content: center; z-index: 100;
@@ -310,6 +295,12 @@
   .loading { text-align: center; padding: 90px 0; color: var(--ink-soft); font-size: .9rem; }
   .loading .mark { font-size: 2rem; margin-bottom: 10px; animation: sway 1.6s ease-in-out infinite; display:inline-block; }
   @keyframes sway { 0%,100%{transform:rotate(-6deg)} 50%{transform:rotate(6deg)} }
+  .setup-box {
+    max-width: 520px; margin: 60px auto; background: #fff; border: 1px solid var(--card-border);
+    border-radius: 18px; padding: 28px; box-shadow: var(--shadow); line-height: 1.7; font-size: .92rem;
+  }
+  .setup-box h2 { font-family: 'Gowun Batang', serif; margin-bottom: 12px; }
+  .setup-box code { background: #f8f1ea; border-radius: 6px; padding: 2px 7px; font-size: .84rem; }
 </style>
 </head>
 <body>
@@ -512,7 +503,13 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const KEY = 'matzip-map-v1';
+/* ═══════════════════════════════════════════
+   ① 여기 두 줄만 채우면 돼!
+   Supabase → Project Settings → API 에서 복사
+   ═══════════════════════════════════════════ */
+const SUPABASE_URL = 'https://lnltkzlovnhcqqzzuqzv.supabase.co';       // 예: https://abcdefgh.supabase.co
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxubHRremxvdm5oY3Fxenp1cXp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5MTE0NzQsImV4cCI6MjA5OTQ4NzQ3NH0.NnMuZdxjLho72Y5Q1XRW7oqD0_NgrCNq21O6FwO3mhs'; // 예: eyJhbGciOi...
+
 const CAT_EMOJI = {'한식':'🍚','중식':'🥟','일식':'🍣','양식':'🍝','분식':'🌶','고기':'🥩','회·해산물':'🐟','카페·디저트':'☕','술집':'🍶','기타':'🍽'};
 const GYEONGGI = /(수원|성남|고양|용인|부천|안산|안양|남양주|화성|평택|의정부|시흥|파주|김포|광명|광주시|군포|하남|오산|이천|안성|의왕|양주|구리|포천|동두천|과천|여주|양평|가평|연천)/;
 let db = { places: [], nameA: '나', nameB: '너' };
@@ -522,8 +519,77 @@ let editingId = null;
 let formStatus = 'visited';
 let formRateA = 0, formRateB = 0;
 let formPhoto = null;
+let sb = null;
 
 const $ = id => document.getElementById(id);
+
+/* ── Supabase 연결 ── */
+function initSupabase() {
+  if (SUPABASE_URL.includes('여기에') || SUPABASE_ANON_KEY.includes('여기에')) {
+    document.querySelector('.wrap').innerHTML = `
+      <div class="setup-box">
+        <h2>🔧 설정이 필요해요</h2>
+        <p>index.html 파일을 열어 <code>&lt;script&gt;</code> 맨 위의
+        <code>SUPABASE_URL</code>과 <code>SUPABASE_ANON_KEY</code>에
+        Supabase 프로젝트 값을 넣어주세요.</p>
+        <p style="margin-top:8px">위치: Supabase 대시보드 → <b>Project Settings → API</b></p>
+      </div>`;
+    document.querySelector('.add-btn').style.display = 'none';
+    return false;
+  }
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return true;
+}
+
+/* ── DB row ↔ 앱 객체 변환 ── */
+function rowToPlace(r) {
+  return {
+    id: r.id, name: r.name, city: r.city || '서울', region: r.region || '',
+    cat: r.cat || '기타', status: r.status || 'wish',
+    rateA: r.rate_a || 0, rateB: r.rate_b || 0,
+    date: r.visit_date || '', special: !!r.special, specialNote: r.special_note || '',
+    memo: r.memo || '', menu: r.menu || '', naverUrl: r.naver_url || '',
+    photo: r.photo || null,
+    createdAt: r.created_at ? new Date(r.created_at).getTime() : 0
+  };
+}
+function placeToRow(p) {
+  return {
+    name: p.name, city: p.city, region: p.region, cat: p.cat, status: p.status,
+    rate_a: p.rateA, rate_b: p.rateB,
+    visit_date: p.date || null,
+    special: p.special, special_note: p.specialNote,
+    memo: p.memo, menu: p.menu, naver_url: p.naverUrl, photo: p.photo
+  };
+}
+
+/* ── 불러오기 & 실시간 ── */
+async function fetchAll() {
+  const [placesRes, settingsRes] = await Promise.all([
+    sb.from('places').select('*'),
+    sb.from('settings').select('*').eq('id', 1).maybeSingle()
+  ]);
+  if (placesRes.error) { toast('데이터를 불러오지 못했어요'); console.error(placesRes.error); return; }
+  db.places = (placesRes.data || []).map(rowToPlace);
+  if (settingsRes.data) {
+    db.nameA = settingsRes.data.name_a || '나';
+    db.nameB = settingsRes.data.name_b || '너';
+  }
+  render();
+}
+let refreshTimer;
+function scheduleRefresh() {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(fetchAll, 300);
+}
+async function start() {
+  if (!initSupabase()) return;
+  await fetchAll();
+  sb.channel('live-updates')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'places' }, scheduleRefresh)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, scheduleRefresh)
+    .subscribe();
+}
 
 /* ── 자동 분류 ── */
 function detectCity(region) {
@@ -555,38 +621,6 @@ function detectCat(text) {
 function guOf(p) {
   const first = (p.region||'').split(' ')[0];
   return first || '기타';
-}
-
-/* ── 저장소 ── */
-async function load() {
-  try {
-    const res = await window.storage.get(KEY, true);
-    if (res && res.value) {
-      const parsed = JSON.parse(res.value);
-      db = { places: [], nameA: '나', nameB: '너', ...parsed };
-    }
-  } catch (e) { /* 처음 실행 */ }
-  migrate();
-  render();
-}
-async function persist() {
-  try {
-    await window.storage.set(KEY, JSON.stringify(db), true);
-  } catch (e) {
-    toast('저장에 실패했어요. 잠시 후 다시 시도해 주세요.');
-  }
-}
-/* 기존 데이터에 시/도·카테고리 자동 채우기 (1회) */
-function migrate() {
-  let changed = false;
-  db.places.forEach(p => {
-    if (!p.city) { p.city = detectCity(p.region); p.region = cleanRegion(p.region); changed = true; }
-    if ((!p.cat || p.cat === '기타')) {
-      const guess = detectCat(p.name + ' ' + (p.memo||'') + ' ' + (p.menu||''));
-      if (guess !== '기타') { p.cat = guess; changed = true; }
-    }
-  });
-  if (changed) persist();
 }
 
 /* ── 렌더 ── */
@@ -649,7 +683,6 @@ function render() {
     <div class="stat s-wish" onclick="setFilter('wish')"><div class="num">${wish}</div><div class="lbl">가고 싶은 곳</div></div>
     <div class="stat s-special" onclick="setFilter('special')"><div class="num">${special}</div><div class="lbl">특별한 날</div></div>`;
 
-  /* 지역 칩 (시/도 → 동네) */
   const cities = [...new Set(db.places.map(p=>p.city).filter(Boolean))].sort();
   $('cityGroup').style.display = cities.length ? 'flex' : 'none';
   $('cityChips').innerHTML = cities.map(c =>
@@ -660,13 +693,11 @@ function render() {
       `<button class="chip sub ${guFilter===g?'on':''}" onclick="setGu('${g}')">${g}</button>`).join('');
   } else $('guChips').innerHTML = '';
 
-  /* 종류 칩 */
   const cats = [...new Set(db.places.map(p=>p.cat))].sort();
   $('catGroup').style.display = cats.length ? 'flex' : 'none';
   $('catChips').innerHTML = cats.map(c =>
     `<button class="chip ${catFilter===c?'on':''}" onclick="setCat('${c}')">${CAT_EMOJI[c]||''} ${c}</button>`).join('');
 
-  /* 필터링 */
   const q = $('search').value.trim().toLowerCase();
   let items = db.places.filter(p => {
     if (filter === 'visited' && p.status !== 'visited') return false;
@@ -692,7 +723,6 @@ function render() {
     return;
   }
 
-  /* 지역별 묶어보기 */
   if (sort === 'region') {
     items.sort((a,b)=>(a.city+guOf(a)).localeCompare(b.city+guOf(b),'ko') || a.name.localeCompare(b.name,'ko'));
     let html = '', lastKey = '';
@@ -718,11 +748,7 @@ function setFilter(f) {
   document.querySelectorAll('#statusChips .chip').forEach(c=>c.classList.toggle('on', c.dataset.f===f));
   render();
 }
-function setCity(c) {
-  cityFilter = cityFilter===c ? null : c;
-  guFilter = null;
-  render();
-}
+function setCity(c) { cityFilter = cityFilter===c ? null : c; guFilter = null; render(); }
 function setGu(g) { guFilter = guFilter===g ? null : g; render(); }
 function setCat(c) { catFilter = catFilter===c ? null : c; render(); }
 
@@ -814,7 +840,7 @@ function normalizeUrl(u) {
 async function saveForm() {
   const name = $('fName').value.trim();
   if (!name) { toast('가게 이름을 입력해 주세요'); return; }
-  const data = {
+  const p = {
     name,
     city: $('fCity').value,
     region: cleanRegion($('fRegion').value.trim()),
@@ -830,35 +856,34 @@ async function saveForm() {
     specialNote: $('fSpecialNote').value.trim(),
     memo: $('fMemo').value.trim(),
   };
-  const wasEditing = editingId;
+  let error;
   if (editingId) {
-    const i = db.places.findIndex(x=>x.id===editingId);
-    db.places[i] = { ...db.places[i], ...data };
+    ({ error } = await sb.from('places').update(placeToRow(p)).eq('id', editingId));
   } else {
-    db.places.push({ id: 'p'+Date.now(), createdAt: Date.now(), ...data });
+    ({ error } = await sb.from('places').insert(placeToRow(p)));
   }
+  if (error) { toast('저장에 실패했어요'); console.error(error); return; }
   closeForm();
-  render();
-  await persist();
-  toast(wasEditing ? '수정했어요' : '지도에 올렸어요 🗺');
+  toast(editingId ? '수정했어요' : '지도에 올렸어요 🗺');
+  await fetchAll();
 }
 
 async function markVisited(id) {
-  const p = db.places.find(x=>x.id===id);
-  p.status = 'visited';
-  p.date = new Date().toISOString().slice(0,10);
-  render();
-  await persist();
+  const { error } = await sb.from('places')
+    .update({ status: 'visited', visit_date: new Date().toISOString().slice(0,10) })
+    .eq('id', id);
+  if (error) { toast('저장에 실패했어요'); return; }
   toast('🔴 도장 찍었어요!');
+  await fetchAll();
   openForm(id);
 }
 
 async function removePlace(id) {
   const p = db.places.find(x=>x.id===id);
   if (!confirm(`'${p.name}' 을(를) 지도에서 지울까요?`)) return;
-  db.places = db.places.filter(x=>x.id!==id);
-  render();
-  await persist();
+  const { error } = await sb.from('places').delete().eq('id', id);
+  if (error) { toast('삭제에 실패했어요'); return; }
+  await fetchAll();
 }
 
 /* ── 일괄 가져오기 ── */
@@ -867,29 +892,28 @@ function closeImport(){ $('importOverlay').classList.remove('show'); }
 async function runImport() {
   const lines = $('importText').value.split('\n').map(l=>l.trim()).filter(Boolean);
   if (!lines.length) { toast('붙여넣은 내용이 없어요'); return; }
-  let count = 0;
+  const rows = [];
   for (const line of lines) {
     const parts = line.split('|').map(s=>s.trim());
     if (!parts[0]) continue;
     if (db.places.some(p=>p.name===parts[0])) continue;
+    if (rows.some(r=>r.name===parts[0])) continue;
     const rawRegion = parts[1]||'';
-    db.places.push({
-      id: 'p'+Date.now()+Math.random().toString(36).slice(2,6),
-      createdAt: Date.now(),
+    rows.push({
       name: parts[0],
       city: detectCity(rawRegion),
       region: cleanRegion(rawRegion),
       memo: parts[2]||'',
       cat: detectCat(parts[0]+' '+(parts[2]||'')),
-      status: 'wish', rateA:0, rateB:0,
-      naverUrl:'', menu:'', photo:null, date:'', special:false, specialNote:''
+      status: 'wish'
     });
-    count++;
   }
+  if (!rows.length) { toast('새로 추가할 곳이 없어요'); return; }
+  const { error } = await sb.from('places').insert(rows);
+  if (error) { toast('가져오기에 실패했어요'); console.error(error); return; }
   closeImport();
-  render();
-  await persist();
-  toast(`${count}곳을 가고 싶은 곳으로 가져왔어요`);
+  toast(`${rows.length}곳을 가고 싶은 곳으로 가져왔어요`);
+  await fetchAll();
 }
 
 /* ── 이름 설정 ── */
@@ -900,11 +924,12 @@ function openNames() {
 }
 function closeNames(){ $('namesOverlay').classList.remove('show'); }
 async function saveNames() {
-  db.nameA = $('nameA').value.trim() || '나';
-  db.nameB = $('nameB').value.trim() || '너';
+  const name_a = $('nameA').value.trim() || '나';
+  const name_b = $('nameB').value.trim() || '너';
+  const { error } = await sb.from('settings').upsert({ id: 1, name_a, name_b });
+  if (error) { toast('저장에 실패했어요'); return; }
   closeNames();
-  render();
-  await persist();
+  await fetchAll();
 }
 
 /* ── 토스트 ── */
@@ -917,7 +942,7 @@ function toast(msg) {
   toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
 }
 
-load();
+start();
 </script>
 </body>
 </html>
