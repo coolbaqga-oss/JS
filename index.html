@@ -167,39 +167,30 @@
   .badge { font-size: .71rem; padding: 2px 9px; border-radius: 999px; background: #f8f1ea; color: #8a7460; }
 
   .stamp {
-    position: absolute; top: 16px; right: 16px;
-    width: 46px; height: 46px; z-index: 2;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Gowun Batang', serif; font-weight: 700; font-size: .74rem;
-    text-align: center; line-height: 1.25; letter-spacing: .06em;
-    transform: rotate(7deg); writing-mode: vertical-rl;
+    position: absolute; top: 14px; right: 14px;
+    width: 52px; height: 52px; z-index: 2;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: 'Gowun Batang', serif; font-weight: 700; font-size: .72rem;
+    text-align: center; line-height: 1.2; letter-spacing: .04em;
+    transform: rotate(-8deg);
   }
   /* 잉크 번짐 질감 */
-  .stamp.visited, .stamp.best, .stamp.double::after {
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='46' height='46'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='2'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0.75'/%3E%3C/filter%3E%3Crect width='46' height='46' filter='url(%23g)'/%3E%3C/svg%3E");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='46' height='46'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='2'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0.75'/%3E%3C/filter%3E%3Crect width='46' height='46' filter='url(%23g)'/%3E%3C/svg%3E");
+  .stamp.visited, .stamp.best {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='52'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='2'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0.75'/%3E%3C/filter%3E%3Crect width='52' height='52' filter='url(%23g)'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='52'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='2'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0.75'/%3E%3C/filter%3E%3Crect width='52' height='52' filter='url(%23g)'/%3E%3C/svg%3E");
     -webkit-mask-size: cover; mask-size: cover;
   }
+  /* 다녀옴 : 원형 빨간 스탬프 */
   .stamp.visited {
-    color: #fff; background: var(--seal);
-    border-radius: 9px 11px 8px 12px / 11px 8px 12px 9px;
+    color: #fff; background: var(--seal); border-radius: 50%;
     box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3.5px var(--seal-deep), 0 2px 6px rgba(217,72,59,.3);
   }
-  /* 2회 방문 : 도장이 한 번 더 겹쳐 찍힘 */
-  .stamp.double::after {
-    content: '다녀옴'; position: absolute; inset: 0; z-index: -1;
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; background: var(--seal); opacity: .4;
-    border-radius: 9px 11px 8px 12px / 11px 8px 12px 9px;
-    transform: translate(-9px, 7px) rotate(-16deg);
-  }
-  /* 3회 이상 : 보장맛집 금색 낙관 */
+  .stamp .x2 { font-size: .66rem; line-height: 1; margin-top: 1px; opacity: .95; }
+  /* 3회 이상 : 보장맛집 금색 스탬프 */
   .stamp.best {
-    width: 50px; height: 50px; top: 14px; right: 14px;
     color: #fff; background: linear-gradient(150deg, #d4a437, #b8862a);
-    border-radius: 50%;
+    border-radius: 50%; font-size: .68rem;
     box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3.5px #97690f, 0 2px 8px rgba(184,134,42,.45);
-    font-size: .68rem;
   }
   .stamp.wish {
     color: var(--wish); border: 2px dashed #a9c3d8; border-radius: 50%;
@@ -207,10 +198,10 @@
   }
   /* 도장 쾅! 애니메이션 */
   @keyframes stampIn {
-    0%   { transform: rotate(7deg) scale(2.6); opacity: 0; }
-    55%  { transform: rotate(7deg) scale(.88); opacity: 1; }
-    75%  { transform: rotate(7deg) scale(1.06); }
-    100% { transform: rotate(7deg) scale(1); }
+    0%   { transform: rotate(-8deg) scale(2.6); opacity: 0; }
+    55%  { transform: rotate(-8deg) scale(.88); opacity: 1; }
+    75%  { transform: rotate(-8deg) scale(1.06); }
+    100% { transform: rotate(-8deg) scale(1); }
   }
   .stamp.slam { animation: stampIn .5s cubic-bezier(.2,1.2,.4,1) both; }
   @media (prefers-reduced-motion: reduce) { .stamp.slam { animation: none; } }
@@ -722,8 +713,8 @@ let slamId = null;
 
 function stampOf(p) {
   if (p.status !== 'visited') return { cls: 'wish', txt: '가보자' };
-  if (p.visits >= 3) return { cls: 'visited best', txt: '보장맛집' };
-  if (p.visits === 2) return { cls: 'visited double', txt: '다녀옴' };
+  if (p.visits >= 3) return { cls: 'visited best', txt: '보장<br>맛집' };
+  if (p.visits >= 2) return { cls: 'visited', txt: `다녀옴<span class="x2">×${p.visits}</span>` };
   return { cls: 'visited', txt: '다녀옴' };
 }
 
