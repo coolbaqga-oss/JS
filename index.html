@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -384,7 +384,7 @@
       <div class="chips" id="catChips"></div>
     </div>
     <div class="tools-row">
-      <button class="link-btn" onclick="openImport()">📋 허소영처럼 추가하기</button>
+      <button class="link-btn" onclick="openImport()">📋 빠르게 추가하기 </button>
       <select id="sort" onchange="render()">
         <option value="new">최근 추가순</option>
         <option value="region">지역별 묶어보기</option>
@@ -527,11 +527,12 @@
     <h2>목록 한꺼번에 가져오기</h2>
     <div class="field">
       <label>한 줄에 한 곳씩 붙여넣기</label>
-      <textarea id="importText" rows="8" placeholder="가게이름 | 지역 | 메모
-예)
+      <textarea id="importText" rows="8" placeholder="어떤 형식이든 OK — 한 줄에 한 곳
 평양면옥 | 을지로 | 냉면 맛집이래
-카페 어니언 | 성수 | 빵 종류 많음"></textarea>
-      <div class="hint">지역·메모는 생략 가능. 전부 <b>가고 싶은 곳</b>으로 들어가고, 시/도와 음식 종류는 내용을 보고 자동 분류돼요. 이미 있는 가게는 건너뛰어요.</div>
+카페 어니언, 성수, 빵 종류 많음
+동동만두
+(네이버 지도 리스트를 통째로 복사해 붙여도 돼요)"></textarea>
+      <div class="hint">지역·메모는 생략 가능. <b>| 쉼표, 탭</b> 아무거나로 구분하고, 줄에 네이버 링크가 있으면 자동 저장돼요. 네이버 지도 즐겨찾기 화면을 드래그 복사해서 그대로 붙여넣으면 가게명·주소·종류를 알아서 인식해요. 전부 <b>가고 싶은 곳</b>으로 들어가고 이미 있는 가게는 건너뛰어요.</div>
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeImport()">취소</button>
@@ -653,8 +654,12 @@ function detectCity(region) {
   const r = region || '';
   if (r.includes('인천')) return '인천';
   if (r.includes('제주')) return '제주';
-  if (r.includes('강원')) return '강원';
-  if (GYEONGGI.test(r)) return '경기';
+  if (/강원/.test(r)) return '강원';
+  if (/(부산|대구|울산|경상|경남|경북|창원|포항|김해|구미|경주|진주)/.test(r)) return '경상';
+  if (/(광주광역시|전라|전남|전북|전주|여수|순천|목포|군산)/.test(r)) return '전라';
+  if (/(대전|세종|충청|충남|충북|천안|청주|아산)/.test(r)) return '충청';
+  if (r.includes('서울')) return '서울';
+  if (/경기/.test(r) || GYEONGGI.test(r)) return '경기';
   return '서울';
 }
 function cleanRegion(region) {
@@ -1033,22 +1038,79 @@ async function removePlace(id) {
 /* ── 일괄 가져오기 ── */
 function openImport(){ $('importText').value=''; $('importOverlay').classList.add('show'); }
 function closeImport(){ $('importOverlay').classList.remove('show'); }
+
+const ADDR_RE = /^(서울특별시|서울시|서울|부산광역시|부산|대구광역시|대구|인천광역시|인천|광주광역시|대전광역시|대전|울산광역시|울산|세종특별자치시|세종|경기도|경기|강원특별자치도|강원도|강원|충청북도|충북|충청남도|충남|전북특별자치도|전라북도|전북|전라남도|전남|경상북도|경북|경상남도|경남|제주특별자치도|제주도|제주)\s/;
+/* 네이버 리스트에서 가게명 뒤에 붙어 나오는 카테고리들 (긴 것부터 검사) */
+const NAVER_CATS = ['스파게티,파스타전문','순대,순댓국','육류,고기요리','칼국수,만두','곱창,막창,양','카페,디저트','일본식라면','이탈리아음식','돼지고기구이','소고기구이','요리주점','찌개,전골','우동,소바','터키음식','아시아음식','종합분식','생선회','샤브샤브','중식당','일식당','이자카야','맥주,호프','샌드위치','가공식품','막국수','닭갈비','닭요리','떡볶이','스키야키','베이커리','한식','중식','일식','양식','국수','만두','국밥','피자','카레','케밥','어묵','분식','카페','기타'];
+
+function parseImportText(text) {
+  const entries = [];
+  let last = null;
+  for (let raw of text.split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (/위치가 변경된 장소/.test(line) || /^정보가 없거나/.test(line)) continue;
+
+    /* ① 주소 줄 → 직전 가게의 지역으로 */
+    if (ADDR_RE.test(line) && last) {
+      const tokens = line.split(/\s+/);
+      const regionTokens = tokens.slice(1).filter(t => !/\d/.test(t)).slice(0, 2);
+      last.region = regionTokens.join(' ');
+      last.cityRaw = line;
+      continue;
+    }
+
+    /* ② 구분자 있는 줄 (| , 탭) */
+    let parts = null;
+    if (line.includes('|')) parts = line.split('|');
+    else if (line.includes('\t')) parts = line.split('\t');
+    else if (line.includes(',')) parts = line.split(',');
+
+    if (parts) {
+      parts = parts.map(s=>s.trim()).filter(Boolean);
+      /* 링크가 섞여 있으면 뽑아내기 */
+      let url = '';
+      parts = parts.filter(p => {
+        if (/^(https?:\/\/|naver\.me|map\.naver\.com)/.test(p)) { url = normalizeUrl(p); return false; }
+        return true;
+      });
+      if (!parts[0]) continue;
+      last = { name: parts[0], region: parts[1]||'', memo: parts.slice(2).join(', '), naverUrl: url, cityRaw: parts[1]||'' };
+      entries.push(last);
+      continue;
+    }
+
+    /* ③ 이름만 있는 줄 — 네이버 리스트처럼 뒤에 카테고리가 붙었으면 분리 */
+    let name = line, memo = '';
+    for (const c of NAVER_CATS) {
+      if (name.length > c.length && name.endsWith(c)) {
+        name = name.slice(0, -c.length).trim();
+        memo = c;
+        break;
+      }
+    }
+    last = { name, region: '', memo, naverUrl: '', cityRaw: '' };
+    entries.push(last);
+  }
+  return entries;
+}
+
 async function runImport() {
-  const lines = $('importText').value.split('\n').map(l=>l.trim()).filter(Boolean);
-  if (!lines.length) { toast('붙여넣은 내용이 없어요'); return; }
+  const text = $('importText').value;
+  if (!text.trim()) { toast('붙여넣은 내용이 없어요'); return; }
+  const entries = parseImportText(text);
   const rows = [];
-  for (const line of lines) {
-    const parts = line.split('|').map(s=>s.trim());
-    if (!parts[0]) continue;
-    if (db.places.some(p=>p.name===parts[0])) continue;
-    if (rows.some(r=>r.name===parts[0])) continue;
-    const rawRegion = parts[1]||'';
+  for (const e of entries) {
+    if (!e.name) continue;
+    if (db.places.some(p=>p.name===e.name)) continue;
+    if (rows.some(r=>r.name===e.name)) continue;
     rows.push({
-      name: parts[0],
-      city: detectCity(rawRegion),
-      region: cleanRegion(rawRegion),
-      memo: parts[2]||'',
-      cat: detectCat(parts[0]+' '+(parts[2]||'')),
+      name: e.name,
+      city: detectCity(e.cityRaw || e.region),
+      region: cleanRegion(e.region),
+      memo: e.memo,
+      naver_url: e.naverUrl || '',
+      cat: detectCat(e.name + ' ' + e.memo),
       status: 'wish'
     });
   }
