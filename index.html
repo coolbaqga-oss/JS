@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>맛집 대동여지도</title>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-top: #fffaf6;
+    --bg-bot: #fceee4;
+    --card: #ffffff;
+    --card-border: #f0dfd2;
+    --ink: #35302b;
+    --ink-soft: #97897c;
+    --seal: #d9483b;
+    --seal-deep: #b93a2e;
+    --seal-soft: #fdeeec;
+    --wish: #4a7ba6;
+    --wish-soft: #edf3f8;
+    --gold: #c9962e;
+    --gold-soft: #fbf3e2;
+    --shadow: 0 1px 2px rgba(120,80,50,.05), 0 4px 14px rgba(120,80,50,.07);
+    --shadow-lift: 0 2px 4px rgba(120,80,50,.06), 0 12px 30px rgba(120,80,50,.13);
+    --radius: 20px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    color: var(--ink);
+    min-height: 100vh;
+    background: #ffffff;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 26px 16px 110px; }
+
+  /* ═══ 헤더 : 옛 지도의 표제 (카르투슈) ═══ */
+  header { text-align: center; padding: 18px 0 6px; }
+  .cartouche {
+    display: inline-block; position: relative;
+    border: 2px solid var(--ink); background: #fff;
+    padding: 18px 40px 16px; box-shadow: var(--shadow);
+  }
+  .cartouche::before {
+    content: ''; position: absolute; inset: 5px;
+    border: 1px solid var(--ink); pointer-events: none;
+  }
+  .corner { position: absolute; width: 10px; height: 10px; background: var(--seal); }
+  .corner.tl { top: -6px; left: -6px; } .corner.tr { top: -6px; right: -6px; }
+  .corner.bl { bottom: -6px; left: -6px; } .corner.br { bottom: -6px; right: -6px; }
+  h1 {
+    font-family: 'Gowun Batang', serif;
+    font-size: clamp(1.5rem, 6vw, 1.9rem); font-weight: 700;
+    letter-spacing: .32em; text-indent: .32em; line-height: 1.2;
+  }
+  .subtitle {
+    margin-top: 8px; font-size: .78rem; color: var(--ink-soft);
+    letter-spacing: .28em; text-indent: .28em;
+    font-family: 'Gowun Batang', serif;
+  }
+  .names {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 16px; padding: 8px 20px;
+    border: 1px solid var(--card-border); border-radius: 999px; background: var(--card);
+    font-family: 'Gowun Batang', serif; font-size: .92rem; color: var(--ink);
+    cursor: pointer; transition: all .18s; box-shadow: var(--shadow);
+  }
+  .names:hover { border-color: var(--seal); transform: translateY(-1px); box-shadow: var(--shadow-lift); }
+  .names .heart { color: var(--seal); font-size: .8rem; }
+
+  /* ═══ 통계 ═══ */
+  .stats {
+    display: flex; gap: 10px; margin: 24px auto 6px; max-width: 480px;
+  }
+  .stat {
+    flex: 1; text-align: center; padding: 15px 4px 13px;
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 18px; cursor: pointer; transition: all .18s; box-shadow: var(--shadow);
+    position: relative; overflow: hidden;
+  }
+  .stat::after {
+    content: ''; position: absolute; top: 0; left: 20%; right: 20%; height: 3px; border-radius: 0 0 6px 6px;
+  }
+  .stat.s-visited::after { background: var(--seal); }
+  .stat.s-wish::after { background: var(--wish); }
+  .stat.s-special::after { background: var(--gold); }
+  .stat:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+  .stat .num { font-family: 'Gowun Batang', serif; font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+  .stat .lbl { font-size: .72rem; color: var(--ink-soft); margin-top: 3px; letter-spacing: .04em; }
+  .stat.s-visited .num { color: var(--seal); }
+  .stat.s-wish .num { color: var(--wish); }
+  .stat.s-special .num { color: var(--gold); }
+
+  /* ═══ 컨트롤 ═══ */
+  .controls { margin-top: 20px; display: flex; flex-direction: column; gap: 11px; }
+  .search-row { position: relative; }
+  .search-row .icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); opacity: .4; font-size: .95rem; }
+  input[type=text], input[type=date], input[type=url], select, textarea {
+    font-family: inherit; font-size: .95rem; color: var(--ink);
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 12px;
+    padding: 11px 14px; width: 100%; outline: none; transition: border-color .15s, box-shadow .15s;
+  }
+  .search-row input { padding-left: 40px; border-radius: 999px; box-shadow: var(--shadow); }
+  input:focus, select:focus, textarea:focus { border-color: var(--seal); box-shadow: 0 0 0 3px rgba(217,72,59,.1); }
+
+  .chip-group { display: flex; align-items: flex-start; gap: 8px; }
+  .chip-label {
+    flex-shrink: 0; font-size: .72rem; color: var(--ink-soft); font-weight: 500;
+    padding: 8px 0 0 2px; width: 34px; letter-spacing: .05em;
+  }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+  .chip {
+    border: 1px solid var(--card-border); background: var(--card); color: var(--ink-soft);
+    border-radius: 999px; padding: 7px 15px; font-size: .83rem; cursor: pointer;
+    transition: all .15s; font-family: inherit; box-shadow: var(--shadow);
+  }
+  .chip:hover { border-color: var(--seal); color: var(--seal); transform: translateY(-1px); }
+  .chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .chip.on:hover { color: #fff; }
+  .chip.on.c-seal { background: var(--seal); border-color: var(--seal); }
+  .chip.on.c-wish { background: var(--wish); border-color: var(--wish); }
+  .chip.on.c-gold { background: var(--gold); border-color: var(--gold); }
+  .chip.sub { padding: 5px 12px; font-size: .78rem; box-shadow: none; background: var(--seal-soft); border-color: transparent; color: var(--seal-deep); }
+  .chip.sub:hover { transform: none; border-color: var(--seal); }
+  .chip.sub.on { background: var(--seal); color: #fff; }
+  .tools-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .tools-row select { width: auto; font-size: .82rem; padding: 8px 12px; border-radius: 999px; box-shadow: var(--shadow); }
+  .link-btn {
+    background: var(--card); border: 1px solid var(--card-border); font-family: inherit; font-size: .8rem;
+    color: var(--ink-soft); cursor: pointer; border-radius: 999px; padding: 8px 14px;
+    box-shadow: var(--shadow); transition: all .15s;
+  }
+  .link-btn:hover { border-color: var(--seal); color: var(--seal); }
+
+  /* ═══ 카드 ═══ */
+  .list { margin-top: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .region-head {
+    font-family: 'Gowun Batang', serif; font-size: .95rem; font-weight: 700; color: var(--ink);
+    margin: 10px 2px -4px; display: flex; align-items: center; gap: 8px;
+  }
+  .region-head::after { content: ''; flex: 1; height: 1px; background: var(--card-border); }
+  .region-head .cnt { font-size: .74rem; color: var(--ink-soft); font-weight: 400; font-family: 'Noto Sans KR'; }
+  .card {
+    background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
+    padding: 18px; position: relative; box-shadow: var(--shadow);
+    transition: transform .18s, box-shadow .18s;
+    animation: rise .3s ease both;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .card { animation: none; } .stat:hover,.chip:hover,.names:hover,.card:hover { transform:none; } }
+  .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+  .card.special { border-color: #ecd9a8; background: linear-gradient(160deg, #fffdf6, var(--card) 40%); }
+  .special-tag {
+    position: absolute; top: -10px; left: 18px;
+    background: var(--gold-soft); border: 1px solid #ecd9a8; border-radius: 999px;
+    font-size: .7rem; color: #9a7420; padding: 2px 10px; font-weight: 500;
+  }
+  .card-body { display: flex; gap: 14px; }
+  .thumb {
+    flex: 0 0 90px; width: 90px; height: 90px; border-radius: 16px;
+    background: linear-gradient(150deg, #faf3ec, #f4e7db);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; overflow: hidden; user-select: none;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .card-main { flex: 1; min-width: 0; padding-right: 54px; }
+  .card h3 {
+    font-family: 'Gowun Batang', serif; font-size: 1.16rem; line-height: 1.3;
+    word-break: keep-all;
+  }
+  .meta { margin-top: 6px; font-size: .79rem; color: var(--ink-soft); display: flex; gap: 5px 9px; flex-wrap: wrap; align-items: center; }
+  .badge {
+    font-size: .71rem; padding: 2px 9px; border-radius: 999px;
+    background: #f8f1ea; color: #8a7460;
+  }
+
+  /* 낙관 도장 */
+  .stamp {
+    position: absolute; top: 16px; right: 16px;
+    width: 46px; height: 46px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Gowun Batang', serif; font-weight: 700; font-size: .74rem;
+    text-align: center; line-height: 1.25; letter-spacing: .06em;
+    transform: rotate(7deg); writing-mode: vertical-rl;
+  }
+  .stamp.visited {
+    color: #fff; background: var(--seal);
+    border-radius: 9px 11px 8px 12px / 11px 8px 12px 9px;
+    box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3.5px var(--seal-deep), 0 2px 6px rgba(217,72,59,.3);
+  }
+  .stamp.wish {
+    color: var(--wish); border: 2px dashed #a9c3d8; border-radius: 50%;
+    background: var(--wish-soft);
+  }
+
+  .ratings { margin-top: 10px; display: flex; gap: 14px; flex-wrap: wrap; font-size: .88rem; }
+  .rating-line { display: flex; align-items: center; gap: 6px; }
+  .rating-line .who {
+    color: #8a7460; font-size: .74rem; background: #f8f1ea;
+    border-radius: 999px; padding: 2px 9px;
+  }
+  .stars { color: var(--gold); letter-spacing: 1.5px; font-size: .92rem; }
+  .stars .off { color: #e8ddd0; }
+
+  .menu-tags { margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap; }
+  .menu-tag {
+    font-size: .75rem; color: #7c6a55; background: #faf3ea; border: 1px solid #f0e4d4;
+    border-radius: 8px; padding: 3px 9px;
+  }
+  .memo {
+    margin-top: 10px; font-size: .86rem; color: var(--ink-soft); line-height: 1.6;
+    white-space: pre-wrap; background: #fbf7f2; border-radius: 12px; padding: 9px 12px;
+  }
+
+  .card-actions { margin-top: 14px; display: flex; gap: 7px; flex-wrap: wrap; }
+  .btn {
+    font-family: inherit; font-size: .8rem; cursor: pointer;
+    border: 1px solid var(--card-border); background: var(--card); color: var(--ink-soft);
+    border-radius: 999px; padding: 7px 15px; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 4px; transition: all .15s;
+  }
+  .btn:hover { border-color: var(--ink-soft); color: var(--ink); transform: translateY(-1px); }
+  .btn.naver { border-color: #cfe3c2; background: #f2f9ec; color: #38761d; }
+  .btn.naver:hover { background: #e6f3db; color: #2c5e16; }
+  .btn.primary { background: var(--seal); color: #fff; border-color: var(--seal); }
+  .btn.primary:hover { background: var(--seal-deep); color: #fff; }
+  .btn.danger:hover { border-color: var(--seal); color: var(--seal); }
+  .btn.stamp-it { border-color: #f0c3bd; color: var(--seal); background: var(--seal-soft); }
+  .btn.stamp-it:hover { background: var(--seal); color: #fff; border-color: var(--seal); }
+
+  /* ═══ 빈 상태 ═══ */
+  .empty { text-align: center; padding: 70px 20px; color: var(--ink-soft); }
+  .empty .mark {
+    width: 78px; height: 78px; margin: 0 auto 16px; background: var(--card);
+    border: 1px solid var(--card-border); box-shadow: var(--shadow);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem;
+  }
+  .empty .big { font-family: 'Gowun Batang', serif; font-size: 1.15rem; margin-bottom: 6px; color: var(--ink); }
+
+  /* ═══ 추가 버튼 ═══ */
+  .add-btn {
+    position: fixed; right: 20px; bottom: 24px; z-index: 50;
+    height: 56px; padding: 0 24px 0 19px; border-radius: 999px;
+    background: linear-gradient(135deg, var(--seal), var(--seal-deep)); color: #fff; border: none;
+    font-size: .95rem; font-family: inherit; font-weight: 500; cursor: pointer;
+    box-shadow: 0 6px 20px rgba(217,72,59,.4);
+    display: flex; align-items: center; gap: 7px; transition: transform .15s;
+  }
+  .add-btn:hover { transform: scale(1.04); }
+  .add-btn .plus { font-size: 1.4rem; line-height: 1; }
+
+  /* ═══ 모달 ═══ */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(53,48,43,.45);
+    display: none; align-items: flex-end; justify-content: center; z-index: 100;
+    backdrop-filter: blur(3px);
+  }
+  .overlay.show { display: flex; }
+  .modal {
+    background: #ffffff; width: 100%; max-width: 580px;
+    border-radius: 24px 24px 0 0; padding: 26px 22px 36px;
+    max-height: 92vh; overflow-y: auto;
+  }
+  @media (min-width: 620px) {
+    .overlay { align-items: center; padding: 20px; }
+    .modal { border-radius: 24px; }
+  }
+  .modal h2 {
+    font-family: 'Gowun Batang', serif; font-size: 1.25rem; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 9px;
+  }
+  .modal h2::before { content: ''; width: 11px; height: 11px; background: var(--seal); border-radius: 3px 4px 3px 4px; transform: rotate(6deg); }
+  .field { margin-bottom: 15px; }
+  .field label { display: block; font-size: .8rem; color: var(--ink-soft); margin-bottom: 6px; font-weight: 500; }
+  .hint { font-size: .74rem; color: var(--ink-soft); margin-top: 5px; opacity: .85; line-height: 1.55; }
+  .row2 { display: flex; gap: 10px; }
+  .row2 > .field { flex: 1; }
+  .status-toggle { display: flex; gap: 8px; }
+  .status-toggle button {
+    flex: 1; padding: 12px; border-radius: 12px; border: 1px solid var(--card-border);
+    background: var(--card); cursor: pointer; font-family: inherit; font-size: .9rem; color: var(--ink-soft);
+    transition: all .15s;
+  }
+  .status-toggle button.on-visited { background: var(--seal); color:#fff; border-color: var(--seal); box-shadow: 0 3px 10px rgba(217,72,59,.3); }
+  .status-toggle button.on-wish { background: var(--wish); color:#fff; border-color: var(--wish); box-shadow: 0 3px 10px rgba(74,123,166,.3); }
+  .star-pick { display: flex; gap: 4px; font-size: 1.6rem; cursor: pointer; user-select: none; }
+  .star-pick span { color: #e8ddd0; transition: transform .1s, color .1s; }
+  .star-pick span:hover { transform: scale(1.15); }
+  .star-pick span.lit { color: var(--gold); }
+  .check-row { display: flex; align-items: center; gap: 8px; font-size: .9rem; }
+  .check-row input { width: auto; accent-color: var(--gold); }
+  .photo-area { display: flex; gap: 12px; align-items: center; }
+  .photo-preview {
+    width: 78px; height: 78px; border-radius: 16px; background: linear-gradient(150deg, #faf3ec, #f4e7db);
+    border: 1px dashed #e5d5c4; display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem; overflow: hidden; flex-shrink: 0;
+  }
+  .photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
+  .modal-actions .btn { flex: 1; justify-content: center; padding: 13px; font-size: .95rem; }
+
+  .toast {
+    position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: #fff; padding: 11px 22px;
+    border-radius: 999px; font-size: .86rem; z-index: 200;
+    opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap;
+    box-shadow: var(--shadow-lift);
+  }
+  .toast.show { opacity: 1; }
+  .loading { text-align: center; padding: 90px 0; color: var(--ink-soft); font-size: .9rem; }
+  .loading .mark { font-size: 2rem; margin-bottom: 10px; animation: sway 1.6s ease-in-out infinite; display:inline-block; }
+  @keyframes sway { 0%,100%{transform:rotate(-6deg)} 50%{transform:rotate(6deg)} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="cartouche">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <h1>맛집 大東輿地圖</h1>
+      <div class="subtitle">둘이서 그리는 맛집 지도</div>
+    </div>
+    <br>
+    <div class="names" id="namesLabel" onclick="openNames()">
+      <span class="heart">♥</span><span id="namesText">이름 설정하기</span><span class="heart">♥</span>
+    </div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="controls">
+    <div class="search-row">
+      <span class="icon">🔍</span>
+      <input type="text" id="search" placeholder="가게 이름 · 지역 · 메뉴로 찾기" oninput="render()">
+    </div>
+    <div class="chip-group">
+      <span class="chip-label">상태</span>
+      <div class="chips" id="statusChips">
+        <button class="chip on" data-f="all" onclick="setFilter('all')">전체</button>
+        <button class="chip c-seal" data-f="visited" onclick="setFilter('visited')">도장 찍은 곳</button>
+        <button class="chip c-wish" data-f="wish" onclick="setFilter('wish')">가고 싶은 곳</button>
+        <button class="chip c-gold" data-f="special" onclick="setFilter('special')">특별한 날</button>
+      </div>
+    </div>
+    <div class="chip-group" id="cityGroup" style="display:none">
+      <span class="chip-label">지역</span>
+      <div style="flex:1">
+        <div class="chips" id="cityChips"></div>
+        <div class="chips" id="guChips" style="margin-top:6px"></div>
+      </div>
+    </div>
+    <div class="chip-group" id="catGroup" style="display:none">
+      <span class="chip-label">종류</span>
+      <div class="chips" id="catChips"></div>
+    </div>
+    <div class="tools-row">
+      <button class="link-btn" onclick="openImport()">📋 목록 한꺼번에 가져오기</button>
+      <select id="sort" onchange="render()">
+        <option value="new">최근 추가순</option>
+        <option value="region">지역별 묶어보기</option>
+        <option value="rating">별점 높은순</option>
+        <option value="date">방문 날짜순</option>
+        <option value="name">이름순</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="list" id="list">
+    <div class="loading"><span class="mark">🗺</span><br>지도를 펼치는 중…</div>
+  </div>
+</div>
+
+<button class="add-btn" onclick="openForm()"><span class="plus">+</span> 맛집 추가</button>
+
+<!-- 추가/수정 모달 -->
+<div class="overlay" id="formOverlay" onclick="if(event.target===this)closeForm()">
+  <div class="modal">
+    <h2 id="formTitle">맛집 추가</h2>
+
+    <div class="field">
+      <label>사진</label>
+      <div class="photo-area">
+        <div class="photo-preview" id="photoPreview">📷</div>
+        <div>
+          <input type="file" id="fPhoto" accept="image/*" style="display:none" onchange="handlePhoto(this)">
+          <button type="button" class="btn" onclick="document.getElementById('fPhoto').click()">사진 고르기</button>
+          <button type="button" class="btn danger" id="photoRemove" style="display:none" onclick="removePhoto()">지우기</button>
+          <div class="hint">네이버 지도 사진을 저장해서 올리면 자동으로 압축돼요.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>가게 이름 *</label>
+      <input type="text" id="fName" placeholder="예) 을지로 골목식당">
+    </div>
+    <div class="row2">
+      <div class="field" style="flex:0.7">
+        <label>시 / 도</label>
+        <select id="fCity">
+          <option>서울</option><option>경기</option><option>인천</option>
+          <option>강원</option><option>충청</option><option>전라</option>
+          <option>경상</option><option>제주</option><option>기타</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>동네</label>
+        <input type="text" id="fRegion" placeholder="예) 중구 신당동">
+      </div>
+    </div>
+    <div class="field">
+      <label>종류</label>
+      <select id="fCat">
+        <option>한식</option><option>중식</option><option>일식</option><option>양식</option>
+        <option>분식</option><option>고기</option><option>회·해산물</option><option>카페·디저트</option>
+        <option>술집</option><option>기타</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>네이버 지도 링크</label>
+      <input type="url" id="fNaver" placeholder="naver.me/… 또는 map.naver.com/…">
+      <div class="hint">네이버 지도에서 <b>공유 → 링크 복사</b>해서 붙여넣으면 카드 버튼이 이 가게로 바로 열려요. 없으면 이름+동네로 자동 검색돼요.</div>
+    </div>
+
+    <div class="field">
+      <label>먹은 · 먹고 싶은 메뉴</label>
+      <input type="text" id="fMenu" placeholder="쉼표로 구분 — 예) 김치찌개, 계란말이">
+    </div>
+
+    <div class="field">
+      <label>상태</label>
+      <div class="status-toggle">
+        <button type="button" id="stVisited" onclick="setStatus('visited')">🔴 다녀왔어요</button>
+        <button type="button" id="stWish" onclick="setStatus('wish')">🔖 가보고 싶어요</button>
+      </div>
+    </div>
+
+    <div id="visitedFields">
+      <div class="row2">
+        <div class="field">
+          <label id="rateALabel">별점</label>
+          <div class="star-pick" id="starsA"></div>
+        </div>
+        <div class="field">
+          <label id="rateBLabel">별점</label>
+          <div class="star-pick" id="starsB"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>방문 날짜</label>
+        <input type="date" id="fDate">
+      </div>
+      <div class="field">
+        <div class="check-row">
+          <input type="checkbox" id="fSpecial" onchange="document.getElementById('specialNoteField').style.display=this.checked?'block':'none'">
+          <label for="fSpecial" style="margin:0;cursor:pointer;">💛 특별한 날이었어요 (기념일, 생일 등)</label>
+        </div>
+      </div>
+      <div class="field" id="specialNoteField" style="display:none;">
+        <label>어떤 날이었나요?</label>
+        <input type="text" id="fSpecialNote" placeholder="예) 500일, 첫 데이트 장소">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>한 줄 기록</label>
+      <textarea id="fMemo" rows="2" placeholder="예) 김치찌개 미쳤다. 웨이팅 30분 각오"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeForm()">취소</button>
+      <button class="btn primary" onclick="saveForm()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 일괄 가져오기 모달 -->
+<div class="overlay" id="importOverlay" onclick="if(event.target===this)closeImport()">
+  <div class="modal">
+    <h2>목록 한꺼번에 가져오기</h2>
+    <div class="field">
+      <label>한 줄에 한 곳씩 붙여넣기</label>
+      <textarea id="importText" rows="8" placeholder="가게이름 | 지역 | 메모
+예)
+평양면옥 | 을지로 | 냉면 맛집이래
+카페 어니언 | 성수 | 빵 종류 많음"></textarea>
+      <div class="hint">지역·메모는 생략 가능. 전부 <b>가고 싶은 곳</b>으로 들어가고, 시/도와 음식 종류는 내용을 보고 자동 분류돼요. 이미 있는 가게는 건너뛰어요.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeImport()">취소</button>
+      <button class="btn primary" onclick="runImport()">가져오기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 이름 설정 모달 -->
+<div class="overlay" id="namesOverlay" onclick="if(event.target===this)closeNames()">
+  <div class="modal">
+    <h2>우리 이름 설정</h2>
+    <div class="row2">
+      <div class="field"><label>첫 번째 사람</label><input type="text" id="nameA" placeholder="예) 종훈"></div>
+      <div class="field"><label>두 번째 사람</label><input type="text" id="nameB" placeholder="예) 소영"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeNames()">취소</button>
+      <button class="btn primary" onclick="saveNames()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY = 'matzip-map-v1';
+const CAT_EMOJI = {'한식':'🍚','중식':'🥟','일식':'🍣','양식':'🍝','분식':'🌶','고기':'🥩','회·해산물':'🐟','카페·디저트':'☕','술집':'🍶','기타':'🍽'};
+const GYEONGGI = /(수원|성남|고양|용인|부천|안산|안양|남양주|화성|평택|의정부|시흥|파주|김포|광명|광주시|군포|하남|오산|이천|안성|의왕|양주|구리|포천|동두천|과천|여주|양평|가평|연천)/;
+let db = { places: [], nameA: '나', nameB: '너' };
+let filter = 'all';
+let catFilter = null, cityFilter = null, guFilter = null;
+let editingId = null;
+let formStatus = 'visited';
+let formRateA = 0, formRateB = 0;
+let formPhoto = null;
+
+const $ = id => document.getElementById(id);
+
+/* ── 자동 분류 ── */
+function detectCity(region) {
+  const r = region || '';
+  if (r.includes('인천')) return '인천';
+  if (r.includes('제주')) return '제주';
+  if (r.includes('강원')) return '강원';
+  if (GYEONGGI.test(r)) return '경기';
+  return '서울';
+}
+function cleanRegion(region) {
+  return (region||'')
+    .replace(/^(서울특별시|서울시|서울|경기도|경기|인천광역시|인천)\s*/,'')
+    .trim();
+}
+function detectCat(text) {
+  const t = text || '';
+  if (/(카페|커피|디저트|베이커리|빵)/.test(t)) return '카페·디저트';
+  if (/(떡볶이|분식)/.test(t)) return '분식';
+  if (/(중식|중화|짜장|마라|딤섬|탄탄면)/.test(t)) return '중식';
+  if (/(피자|파스타|스파게티|이탈리|버거|샌드위치|브런치)/.test(t)) return '양식';
+  if (/(이자카야|맥주|호프|주점|포차|와인|바\b)/.test(t)) return '술집';
+  if (/(라멘|우동|소바|일식|스시|초밥|스키야키|샤브|오코노미야키|돈카츠|돈까스|카레|규동)/.test(t)) return '일식';
+  if (/(참치|생선|회\b|횟집|해산물|물회|조개)/.test(t)) return '회·해산물';
+  if (/(갈비|구이|고기|돼지|소고기|곱창|막창|갈매기|정육|생고기|삼겹|족발|보쌈|닭갈비)/.test(t)) return '고기';
+  if (/(국수|국시|칼국수|만두|국밥|해장|순대|찌개|전골|한식|막국수|닭한마리|냉면|백반|김치|밥|식당|매운탕|어묵)/.test(t)) return '한식';
+  return '기타';
+}
+function guOf(p) {
+  const first = (p.region||'').split(' ')[0];
+  return first || '기타';
+}
+
+/* ── 저장소 ── */
+async function load() {
+  try {
+    const res = await window.storage.get(KEY, true);
+    if (res && res.value) {
+      const parsed = JSON.parse(res.value);
+      db = { places: [], nameA: '나', nameB: '너', ...parsed };
+    }
+  } catch (e) { /* 처음 실행 */ }
+  migrate();
+  render();
+}
+async function persist() {
+  try {
+    await window.storage.set(KEY, JSON.stringify(db), true);
+  } catch (e) {
+    toast('저장에 실패했어요. 잠시 후 다시 시도해 주세요.');
+  }
+}
+/* 기존 데이터에 시/도·카테고리 자동 채우기 (1회) */
+function migrate() {
+  let changed = false;
+  db.places.forEach(p => {
+    if (!p.city) { p.city = detectCity(p.region); p.region = cleanRegion(p.region); changed = true; }
+    if ((!p.cat || p.cat === '기타')) {
+      const guess = detectCat(p.name + ' ' + (p.memo||'') + ' ' + (p.menu||''));
+      if (guess !== '기타') { p.cat = guess; changed = true; }
+    }
+  });
+  if (changed) persist();
+}
+
+/* ── 렌더 ── */
+function starStr(n) {
+  if (!n) return '<span class="off">평가 전</span>';
+  let s = '';
+  for (let i = 1; i <= 5; i++) s += i <= n ? '★' : '<span class="off">★</span>';
+  return s;
+}
+function avg(p) {
+  const r = [p.rateA, p.rateB].filter(x => x > 0);
+  return r.length ? r.reduce((a,b)=>a+b,0)/r.length : 0;
+}
+function placeLink(p) {
+  if (p.naverUrl) return p.naverUrl;
+  return 'https://map.naver.com/p/search/' + encodeURIComponent((p.region ? p.region + ' ' : '') + p.name);
+}
+function esc(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function cardHTML(p) {
+  return `
+    <div class="card ${p.special?'special':''}">
+      ${p.special?`<div class="special-tag">💛 ${esc(p.specialNote||'특별한 날')}</div>`:''}
+      <div class="stamp ${p.status}">${p.status==='visited'?'다녀옴':'가보자'}</div>
+      <div class="card-body">
+        <div class="thumb">${p.photo?`<img src="${p.photo}" alt="">`:(CAT_EMOJI[p.cat]||'🍽')}</div>
+        <div class="card-main">
+          <h3>${esc(p.name)}</h3>
+          <div class="meta">
+            <span>📍 ${esc(p.city)}${p.region?' · '+esc(p.region):''}</span>
+            <span class="badge">${esc(p.cat)}</span>
+            ${p.date?`<span>${p.date}</span>`:''}
+          </div>
+          ${p.status==='visited'?`
+          <div class="ratings">
+            <div class="rating-line"><span class="who">${esc(db.nameA)}</span><span class="stars">${starStr(p.rateA)}</span></div>
+            <div class="rating-line"><span class="who">${esc(db.nameB)}</span><span class="stars">${starStr(p.rateB)}</span></div>
+          </div>`:''}
+          ${p.menu?`<div class="menu-tags">${p.menu.split(',').map(m=>m.trim()).filter(Boolean).map(m=>`<span class="menu-tag">🍽 ${esc(m)}</span>`).join('')}</div>`:''}
+          ${p.memo?`<div class="memo">${esc(p.memo)}</div>`:''}
+        </div>
+      </div>
+      <div class="card-actions">
+        <a class="btn naver" href="${esc(placeLink(p))}" target="_blank" rel="noopener">🟢 네이버지도</a>
+        ${p.status==='wish'?`<button class="btn stamp-it" onclick="markVisited('${p.id}')">🔴 도장 찍기</button>`:''}
+        <button class="btn" onclick="openForm('${p.id}')">수정</button>
+        <button class="btn danger" onclick="removePlace('${p.id}')">삭제</button>
+      </div>
+    </div>`;
+}
+
+function render() {
+  $('namesText').textContent = (db.nameA!=='나'||db.nameB!=='너') ? `${db.nameA} · ${db.nameB}` : '이름 설정하기';
+
+  const visited = db.places.filter(p=>p.status==='visited').length;
+  const wish = db.places.filter(p=>p.status==='wish').length;
+  const special = db.places.filter(p=>p.special).length;
+  $('stats').innerHTML = `
+    <div class="stat s-visited" onclick="setFilter('visited')"><div class="num">${visited}</div><div class="lbl">도장 찍은 곳</div></div>
+    <div class="stat s-wish" onclick="setFilter('wish')"><div class="num">${wish}</div><div class="lbl">가고 싶은 곳</div></div>
+    <div class="stat s-special" onclick="setFilter('special')"><div class="num">${special}</div><div class="lbl">특별한 날</div></div>`;
+
+  /* 지역 칩 (시/도 → 동네) */
+  const cities = [...new Set(db.places.map(p=>p.city).filter(Boolean))].sort();
+  $('cityGroup').style.display = cities.length ? 'flex' : 'none';
+  $('cityChips').innerHTML = cities.map(c =>
+    `<button class="chip ${cityFilter===c?'on c-seal':''}" onclick="setCity('${c}')">${c}</button>`).join('');
+  if (cityFilter) {
+    const gus = [...new Set(db.places.filter(p=>p.city===cityFilter).map(guOf))].sort();
+    $('guChips').innerHTML = gus.map(g =>
+      `<button class="chip sub ${guFilter===g?'on':''}" onclick="setGu('${g}')">${g}</button>`).join('');
+  } else $('guChips').innerHTML = '';
+
+  /* 종류 칩 */
+  const cats = [...new Set(db.places.map(p=>p.cat))].sort();
+  $('catGroup').style.display = cats.length ? 'flex' : 'none';
+  $('catChips').innerHTML = cats.map(c =>
+    `<button class="chip ${catFilter===c?'on':''}" onclick="setCat('${c}')">${CAT_EMOJI[c]||''} ${c}</button>`).join('');
+
+  /* 필터링 */
+  const q = $('search').value.trim().toLowerCase();
+  let items = db.places.filter(p => {
+    if (filter === 'visited' && p.status !== 'visited') return false;
+    if (filter === 'wish' && p.status !== 'wish') return false;
+    if (filter === 'special' && !p.special) return false;
+    if (cityFilter && p.city !== cityFilter) return false;
+    if (guFilter && guOf(p) !== guFilter) return false;
+    if (catFilter && p.cat !== catFilter) return false;
+    if (q && !(p.name+' '+(p.region||'')+' '+(p.city||'')+' '+(p.menu||'')+' '+(p.memo||'')).toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const sort = $('sort').value;
+  if (sort === 'new') items.sort((a,b)=>b.createdAt-a.createdAt);
+  if (sort === 'rating') items.sort((a,b)=>avg(b)-avg(a));
+  if (sort === 'name') items.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+  if (sort === 'date') items.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+
+  if (!items.length) {
+    $('list').innerHTML = db.places.length
+      ? `<div class="empty"><div class="mark">🧭</div><div class="big">조건에 맞는 곳이 없어요</div>필터를 바꿔보세요</div>`
+      : `<div class="empty"><div class="mark">🍚</div><div class="big">아직 지도가 비어 있어요</div>아래 <b>+ 맛집 추가</b> 버튼으로<br>첫 맛집을 올려보세요</div>`;
+    return;
+  }
+
+  /* 지역별 묶어보기 */
+  if (sort === 'region') {
+    items.sort((a,b)=>(a.city+guOf(a)).localeCompare(b.city+guOf(b),'ko') || a.name.localeCompare(b.name,'ko'));
+    let html = '', lastKey = '';
+    for (const p of items) {
+      const key = `${p.city} ${guOf(p)}`;
+      if (key !== lastKey) {
+        const cnt = items.filter(x=>`${x.city} ${guOf(x)}`===key).length;
+        html += `<div class="region-head">📍 ${esc(key)} <span class="cnt">${cnt}곳</span></div>`;
+        lastKey = key;
+      }
+      html += cardHTML(p);
+    }
+    $('list').innerHTML = html;
+    return;
+  }
+
+  $('list').innerHTML = items.map(cardHTML).join('');
+}
+
+/* ── 필터 ── */
+function setFilter(f) {
+  filter = f;
+  document.querySelectorAll('#statusChips .chip').forEach(c=>c.classList.toggle('on', c.dataset.f===f));
+  render();
+}
+function setCity(c) {
+  cityFilter = cityFilter===c ? null : c;
+  guFilter = null;
+  render();
+}
+function setGu(g) { guFilter = guFilter===g ? null : g; render(); }
+function setCat(c) { catFilter = catFilter===c ? null : c; render(); }
+
+/* ── 사진 처리 ── */
+function handlePhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = e => { img.src = e.target.result; };
+  img.onload = () => {
+    const MAX = 480;
+    let w = img.width, h = img.height;
+    if (w > h && w > MAX) { h = h * MAX / w; w = MAX; }
+    else if (h >= w && h > MAX) { w = w * MAX / h; h = MAX; }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    formPhoto = canvas.toDataURL('image/jpeg', 0.7);
+    $('photoPreview').innerHTML = `<img src="${formPhoto}" alt="">`;
+    $('photoRemove').style.display = 'inline-flex';
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+function removePhoto() {
+  formPhoto = null;
+  $('photoPreview').textContent = '📷';
+  $('photoRemove').style.display = 'none';
+}
+
+/* ── 폼 ── */
+function openForm(id) {
+  editingId = id || null;
+  const p = id ? db.places.find(x=>x.id===id) : null;
+  $('formTitle').textContent = p ? '맛집 수정' : '맛집 추가';
+  $('fName').value = p?.name || '';
+  $('fCity').value = p?.city || '서울';
+  $('fRegion').value = p?.region || '';
+  $('fCat').value = p?.cat || '한식';
+  $('fNaver').value = p?.naverUrl || '';
+  $('fMenu').value = p?.menu || '';
+  $('fDate').value = p?.date || '';
+  $('fMemo').value = p?.memo || '';
+  $('fSpecial').checked = !!p?.special;
+  $('fSpecialNote').value = p?.specialNote || '';
+  $('specialNoteField').style.display = p?.special ? 'block' : 'none';
+  formRateA = p?.rateA || 0;
+  formRateB = p?.rateB || 0;
+  formPhoto = p?.photo || null;
+  if (formPhoto) {
+    $('photoPreview').innerHTML = `<img src="${formPhoto}" alt="">`;
+    $('photoRemove').style.display = 'inline-flex';
+  } else removePhoto();
+  setStatus(p?.status || 'visited');
+  $('rateALabel').textContent = db.nameA + ' 별점';
+  $('rateBLabel').textContent = db.nameB + ' 별점';
+  drawStars();
+  $('formOverlay').classList.add('show');
+}
+function closeForm(){ $('formOverlay').classList.remove('show'); }
+
+function setStatus(s) {
+  formStatus = s;
+  $('stVisited').className = s==='visited' ? 'on-visited' : '';
+  $('stWish').className = s==='wish' ? 'on-wish' : '';
+  $('visitedFields').style.display = s==='visited' ? 'block' : 'none';
+}
+function drawStars() {
+  ['A','B'].forEach(k => {
+    const val = k==='A' ? formRateA : formRateB;
+    $('stars'+k).innerHTML = [1,2,3,4,5].map(i =>
+      `<span class="${i<=val?'lit':''}" onclick="pickStar('${k}',${i})">★</span>`).join('');
+  });
+}
+function pickStar(k, i) {
+  if (k==='A') formRateA = formRateA===i ? 0 : i;
+  else formRateB = formRateB===i ? 0 : i;
+  drawStars();
+}
+
+function normalizeUrl(u) {
+  u = u.trim();
+  if (!u) return '';
+  if (!/^https?:\/\//.test(u)) u = 'https://' + u;
+  return u;
+}
+
+async function saveForm() {
+  const name = $('fName').value.trim();
+  if (!name) { toast('가게 이름을 입력해 주세요'); return; }
+  const data = {
+    name,
+    city: $('fCity').value,
+    region: cleanRegion($('fRegion').value.trim()),
+    cat: $('fCat').value,
+    naverUrl: normalizeUrl($('fNaver').value),
+    menu: $('fMenu').value.trim(),
+    photo: formPhoto,
+    status: formStatus,
+    rateA: formStatus==='visited' ? formRateA : 0,
+    rateB: formStatus==='visited' ? formRateB : 0,
+    date: formStatus==='visited' ? $('fDate').value : '',
+    special: formStatus==='visited' && $('fSpecial').checked,
+    specialNote: $('fSpecialNote').value.trim(),
+    memo: $('fMemo').value.trim(),
+  };
+  const wasEditing = editingId;
+  if (editingId) {
+    const i = db.places.findIndex(x=>x.id===editingId);
+    db.places[i] = { ...db.places[i], ...data };
+  } else {
+    db.places.push({ id: 'p'+Date.now(), createdAt: Date.now(), ...data });
+  }
+  closeForm();
+  render();
+  await persist();
+  toast(wasEditing ? '수정했어요' : '지도에 올렸어요 🗺');
+}
+
+async function markVisited(id) {
+  const p = db.places.find(x=>x.id===id);
+  p.status = 'visited';
+  p.date = new Date().toISOString().slice(0,10);
+  render();
+  await persist();
+  toast('🔴 도장 찍었어요!');
+  openForm(id);
+}
+
+async function removePlace(id) {
+  const p = db.places.find(x=>x.id===id);
+  if (!confirm(`'${p.name}' 을(를) 지도에서 지울까요?`)) return;
+  db.places = db.places.filter(x=>x.id!==id);
+  render();
+  await persist();
+}
+
+/* ── 일괄 가져오기 ── */
+function openImport(){ $('importText').value=''; $('importOverlay').classList.add('show'); }
+function closeImport(){ $('importOverlay').classList.remove('show'); }
+async function runImport() {
+  const lines = $('importText').value.split('\n').map(l=>l.trim()).filter(Boolean);
+  if (!lines.length) { toast('붙여넣은 내용이 없어요'); return; }
+  let count = 0;
+  for (const line of lines) {
+    const parts = line.split('|').map(s=>s.trim());
+    if (!parts[0]) continue;
+    if (db.places.some(p=>p.name===parts[0])) continue;
+    const rawRegion = parts[1]||'';
+    db.places.push({
+      id: 'p'+Date.now()+Math.random().toString(36).slice(2,6),
+      createdAt: Date.now(),
+      name: parts[0],
+      city: detectCity(rawRegion),
+      region: cleanRegion(rawRegion),
+      memo: parts[2]||'',
+      cat: detectCat(parts[0]+' '+(parts[2]||'')),
+      status: 'wish', rateA:0, rateB:0,
+      naverUrl:'', menu:'', photo:null, date:'', special:false, specialNote:''
+    });
+    count++;
+  }
+  closeImport();
+  render();
+  await persist();
+  toast(`${count}곳을 가고 싶은 곳으로 가져왔어요`);
+}
+
+/* ── 이름 설정 ── */
+function openNames() {
+  $('nameA').value = db.nameA==='나' ? '' : db.nameA;
+  $('nameB').value = db.nameB==='너' ? '' : db.nameB;
+  $('namesOverlay').classList.add('show');
+}
+function closeNames(){ $('namesOverlay').classList.remove('show'); }
+async function saveNames() {
+  db.nameA = $('nameA').value.trim() || '나';
+  db.nameB = $('nameB').value.trim() || '너';
+  closeNames();
+  render();
+  await persist();
+}
+
+/* ── 토스트 ── */
+let toastTimer;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+load();
+</script>
+</body>
+</html>
