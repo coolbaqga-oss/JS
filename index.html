@@ -954,7 +954,7 @@ function render() {
   if (ranked.length) {
     const medals = ['🥇','🥈','🥉'];
     $('podium').innerHTML = ranked.map((p,i) =>
-      `<span class="p-item">${medals[i]} <b>${esc(p.name)}</b> <span class="p-star">★${Math.round(avg(p))}</span></span>`
+      `<span class="p-item">${medals[i]} <b>${esc(p.name)}</b> <span class="p-star">★${Math.round(avg(p))}</span>`
     ).join('');
     $('podium').style.display = 'flex';
   } else $('podium').style.display = 'none';
