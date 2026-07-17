@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -221,9 +221,13 @@
   .counter button:hover { border-color: var(--seal); color: var(--seal); }
   .counter .cnt-num { font-family: 'Gowun Batang', serif; font-size: 1.3rem; font-weight: 700; min-width: 40px; text-align: center; }
 
-  .ratings { margin-top: 10px; display: flex; gap: 14px; flex-wrap: wrap; font-size: .88rem; }
+  .ratings { margin-top: 10px; display: flex; flex-direction: column; gap: 9px; font-size: .88rem; }
   .rating-line { display: flex; align-items: center; gap: 6px; }
   .rating-line .who { color: #8a7460; font-size: .74rem; background: #f8f1ea; border-radius: 999px; padding: 2px 9px; }
+  .one-line {
+    margin: 3px 0 0 4px; font-size: .84rem; color: var(--ink-soft); line-height: 1.5;
+    border-left: 2px solid #eadfce; padding-left: 9px;
+  }
   .stars { color: var(--gold); letter-spacing: 1.5px; font-size: .92rem; }
   .stars .off { color: #e8ddd0; }
 
@@ -372,19 +376,24 @@
         <button class="chip c-gold" data-f="special" onclick="setFilter('special')">특별한 날</button>
       </div>
     </div>
-    <div class="chip-group" id="cityGroup" style="display:none">
-      <span class="chip-label">지역</span>
-      <div style="flex:1">
-        <div class="chips" id="cityChips"></div>
-        <div class="chips" id="guChips" style="margin-top:6px"></div>
+    <div id="advFilters" style="display:none; flex-direction:column; gap:11px">
+      <div class="chip-group" id="cityGroup" style="display:none">
+        <span class="chip-label">지역</span>
+        <div style="flex:1">
+          <div class="chips" id="cityChips"></div>
+          <div class="chips" id="guChips" style="margin-top:6px"></div>
+        </div>
+      </div>
+      <div class="chip-group" id="catGroup" style="display:none">
+        <span class="chip-label">종류</span>
+        <div class="chips" id="catChips"></div>
       </div>
     </div>
-    <div class="chip-group" id="catGroup" style="display:none">
-      <span class="chip-label">종류</span>
-      <div class="chips" id="catChips"></div>
-    </div>
     <div class="tools-row">
-      <button class="link-btn" onclick="openImport()">📋 빠르게 추가하기 </button>
+      <div style="display:flex; gap:6px">
+        <button class="link-btn" id="advBtn" onclick="toggleAdv()">필터 ▾</button>
+        <button class="link-btn" onclick="openImport()">📋 가져오기</button>
+      </div>
       <select id="sort" onchange="render()">
         <option value="new">최근 추가순</option>
         <option value="region">지역별 묶어보기</option>
@@ -443,7 +452,7 @@
       <select id="fCat">
         <option>한식</option><option>중식</option><option>일식</option><option>양식</option>
         <option>분식</option><option>고기</option><option>회·해산물</option><option>카페·디저트</option>
-        <option>안주맛집</option><option>기타</option>
+        <option>술집</option><option>기타</option>
       </select>
     </div>
 
@@ -476,6 +485,14 @@
           <label id="rateBLabel">별점</label>
           <div class="star-pick" id="starsB"></div>
         </div>
+      </div>
+      <div class="field">
+        <label id="memoALabel">한줄평</label>
+        <input type="text" id="fMemoA" placeholder="예) 국물이 미쳤다">
+      </div>
+      <div class="field">
+        <label id="memoBLabel">한줄평</label>
+        <input type="text" id="fMemoB" placeholder="예) 재방문 의사 200%">
       </div>
       <div class="row2">
         <div class="field">
@@ -563,8 +580,8 @@
    ① 여기 두 줄만 채우면 돼!
    Supabase → Project Settings → API 에서 복사
    ═══════════════════════════════════════════ */
-const SUPABASE_URL = 'https://lnltkzlovnhcqqzzuqzv.supabase.co';       // 예: https://abcdefgh.supabase.co
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxubHRremxvdm5oY3Fxenp1cXp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5MTE0NzQsImV4cCI6MjA5OTQ4NzQ3NH0.NnMuZdxjLho72Y5Q1XRW7oqD0_NgrCNq21O6FwO3mhs'; // 예: eyJhbGciOi...
+const SUPABASE_URL = '여기에_프로젝트_URL';       // 예: https://abcdefgh.supabase.co
+const SUPABASE_ANON_KEY = '여기에_anon_public_키'; // 예: eyJhbGciOi...
 
 const CAT_EMOJI = {'한식':'🍚','중식':'🥟','일식':'🍣','양식':'🍝','분식':'🌶','고기':'🥩','회·해산물':'🐟','카페·디저트':'☕','술집':'🍶','기타':'🍽'};
 const GYEONGGI = /(수원|성남|고양|용인|부천|안산|안양|남양주|화성|평택|의정부|시흥|파주|김포|광명|광주시|군포|하남|오산|이천|안성|의왕|양주|구리|포천|동두천|과천|여주|양평|가평|연천)/;
@@ -603,6 +620,7 @@ function rowToPlace(r) {
     id: r.id, name: r.name, city: r.city || '서울', region: r.region || '',
     cat: r.cat || '기타', status: r.status || 'wish',
     rateA: r.rate_a || 0, rateB: r.rate_b || 0,
+    memoA: r.memo_a || '', memoB: r.memo_b || '',
     visits: r.visits ?? 1, again: !!r.again,
     date: r.visit_date || '', special: !!r.special, specialNote: r.special_note || '',
     memo: r.memo || '', menu: r.menu || '', naverUrl: r.naver_url || '',
@@ -614,6 +632,7 @@ function placeToRow(p) {
   return {
     name: p.name, city: p.city, region: p.region, cat: p.cat, status: p.status,
     rate_a: p.rateA, rate_b: p.rateB,
+    memo_a: p.memoA, memo_b: p.memoB,
     visits: p.visits, again: p.again,
     visit_date: p.date || null,
     special: p.special, special_note: p.specialNote,
@@ -710,7 +729,7 @@ function stampOf(p) {
 
   const visits = p.visits || 1;
   let color, arcTop, main, icon;
-  if (visits >= 3)      { color = '#c0392b'; arcTop = 'CERTIFIED'; main = '맛집 보장'; icon = '★★★★★'; }
+  if (visits >= 3)      { color = '#c0392b'; arcTop = 'CERTIFIED'; main = '맛집 보장'; icon = '★'; }
   else if (visits === 2){ color = '#3f6fa8'; arcTop = 'REVISITED'; main = '또 왔네';  icon = '⟳'; }
   else                  { color = '#77736c'; arcTop = 'VISITED';   main = '다녀옴';   icon = '✓'; }
 
@@ -741,11 +760,18 @@ function stampOf(p) {
   return { cls: 'ink', txt: svg };
 }
 
+function bothStars(p) {
+  const a = p.rateA, b = p.rateB;
+  if (a && b) return `★ ${a}·${b}`;
+  if (a || b) return `★ ${a || b}`;
+  return '';
+}
+
 function cardHTML(p) {
   const st = stampOf(p);
   const slam = p.id === slamId ? ' slam' : '';
   const open = openCards.has(p.id) ? ' open' : '';
-  const a = avg(p);
+  const bs = p.status==='visited' ? bothStars(p) : '';
   return `
     <div class="card ${p.special?'special':''}${open}" onclick="toggleCard(event,'${p.id}')">
       ${p.special?`<div class="special-tag">💛 ${esc(p.specialNote||'특별한 날')}</div>`:''}
@@ -757,15 +783,21 @@ function cardHTML(p) {
           <div class="meta">
             <span>📍 ${esc(p.city)}${p.region?' · '+esc(p.region):''}</span>
             <span class="badge">${esc(p.cat)}</span>
-            ${p.status==='visited' && a ? `<span class="stars" style="font-size:.78rem">★ ${a.toFixed(1)}</span>` : ''}
+            ${bs ? `<span class="stars" style="font-size:.78rem">${bs}</span>` : ''}
             ${p.status==='visited' && p.visits>1 ? `<span class="visit-badge">${p.visits}회 방문</span>` : ''}
             ${p.again ? `<span class="again-tag">💙 또 가자</span>` : ''}
           </div>
           <div class="card-details">
             ${p.status==='visited'?`
             <div class="ratings">
-              <div class="rating-line"><span class="who">${esc(db.nameA)}</span><span class="stars">${starStr(p.rateA)}</span></div>
-              <div class="rating-line"><span class="who">${esc(db.nameB)}</span><span class="stars">${starStr(p.rateB)}</span></div>
+              <div>
+                <div class="rating-line"><span class="who">${esc(db.nameA)}</span><span class="stars">${starStr(p.rateA)}</span></div>
+                ${p.memoA?`<div class="one-line">“${esc(p.memoA)}”</div>`:''}
+              </div>
+              <div>
+                <div class="rating-line"><span class="who">${esc(db.nameB)}</span><span class="stars">${starStr(p.rateB)}</span></div>
+                ${p.memoB?`<div class="one-line">“${esc(p.memoB)}”</div>`:''}
+              </div>
             </div>`:''}
             ${p.date?`<div class="meta" style="margin-top:8px"><span>🗓 마지막 방문 ${p.date}</span></div>`:''}
             ${p.menu?`<div class="menu-tags">${p.menu.split(',').map(m=>m.trim()).filter(Boolean).map(m=>`<span class="menu-tag">🍽 ${esc(m)}</span>`).join('')}</div>`:''}
@@ -818,6 +850,7 @@ function render() {
   $('catGroup').style.display = cats.length ? 'flex' : 'none';
   $('catChips').innerHTML = cats.map(c =>
     `<button class="chip ${catFilter===c?'on':''}" onclick="setCat('${c}')">${CAT_EMOJI[c]||''} ${c}</button>`).join('');
+  updateAdvBtn();
 
   const q = $('search').value.trim().toLowerCase();
   let items = db.places.filter(p => {
@@ -869,6 +902,18 @@ function setFilter(f) {
   filter = f;
   document.querySelectorAll('#statusChips .chip').forEach(c=>c.classList.toggle('on', c.dataset.f===f));
   render();
+}
+let advOpen = false;
+function toggleAdv() {
+  advOpen = !advOpen;
+  $('advFilters').style.display = advOpen ? 'flex' : 'none';
+  updateAdvBtn();
+}
+function updateAdvBtn() {
+  const n = [cityFilter, guFilter, catFilter].filter(Boolean).length;
+  $('advBtn').textContent = `필터${n ? ' ●'+n : ''} ${advOpen ? '▴' : '▾'}`;
+  $('advBtn').style.color = n ? 'var(--seal)' : '';
+  $('advBtn').style.borderColor = n ? 'var(--seal)' : '';
 }
 function setCity(c) { cityFilter = cityFilter===c ? null : c; guFilter = null; render(); }
 function setGu(g) { guFilter = guFilter===g ? null : g; render(); }
@@ -937,6 +982,10 @@ function openForm(id) {
   setStatus(p?.status || 'visited');
   $('rateALabel').textContent = db.nameA + ' 별점';
   $('rateBLabel').textContent = db.nameB + ' 별점';
+  $('memoALabel').textContent = db.nameA + ' 한줄평';
+  $('memoBLabel').textContent = db.nameB + ' 한줄평';
+  $('fMemoA').value = p?.memoA || '';
+  $('fMemoB').value = p?.memoB || '';
   drawStars();
   $('formOverlay').classList.add('show');
 }
@@ -982,6 +1031,8 @@ async function saveForm() {
     status: formStatus,
     rateA: formStatus==='visited' ? formRateA : 0,
     rateB: formStatus==='visited' ? formRateB : 0,
+    memoA: formStatus==='visited' ? $('fMemoA').value.trim() : '',
+    memoB: formStatus==='visited' ? $('fMemoB').value.trim() : '',
     visits: formStatus==='visited' ? formVisits : 1,
     again: formStatus==='visited' && $('fAgain').checked,
     date: formStatus==='visited' ? $('fDate').value : '',
