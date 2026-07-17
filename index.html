@@ -346,6 +346,16 @@
     box-shadow: var(--shadow-lift);
   }
   .toast.show { opacity: 1; }
+  .update-banner {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+    background: var(--seal); color: #fff; border: none;
+    padding: 11px 22px; border-radius: 999px; font-size: .88rem; font-family: inherit;
+    font-weight: 500; cursor: pointer; z-index: 300;
+    box-shadow: 0 6px 20px rgba(217,72,59,.4); display: none;
+    animation: dropIn .4s ease;
+  }
+  @keyframes dropIn { from { transform: translate(-50%,-30px); opacity: 0; } to { transform: translate(-50%,0); opacity: 1; } }
+  .update-banner.show { display: block; }
   .app-foot {
     text-align: center; margin-top: 40px; font-size: .78rem; color: #c9bfae;
     font-family: 'Gowun Batang', serif;
@@ -627,6 +637,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<button class="update-banner" id="updateBanner" onclick="applyUpdate()">🔄 새 버전이 있어요 — 눌러서 업데이트</button>
 
 <script>
 /* ═══════════════════════════════════════════
@@ -639,8 +650,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const CAT_EMOJI = {'한식':'🍚','중식':'🥟','일식':'🍣','양식':'🍝','분식':'🌶','고기':'🥩','회·해산물':'🐟','카페·디저트':'☕','술집':'🍶','기타':'🍽'};
 
 /* ═══ 업데이트 소식 (새 버전 배포할 때 여기에 추가) ═══ */
-const APP_VERSION = '2026.07.18-3';
+const APP_VERSION = '2026.07.18-4';
 const CHANGELOG = [
+  { ver: '2026.07.18 (4차)', items: [
+    '새 버전이 나오면 위에 배너가 떠요 — 누르면 바로 업데이트 (홈 화면 앱도 OK)',
+    '앱을 다시 열 때마다 데이터와 버전을 자동으로 확인해요',
+  ]},
   { ver: '2026.07.18 (3차)', items: [
     '통계 아래에 🥇🥈🥉 랭킹 Top 3가 항상 보여요 — 누르면 전체 랭킹으로 이동',
     '접힌 카드의 별점이 평균 한 개 숫자로 깔끔해졌어요 (★ 4)',
@@ -673,6 +688,24 @@ function openUpdates() {
   $('updateBtn').classList.remove('new');
 }
 function closeUpdates(){ $('updateOverlay').classList.remove('show'); }
+
+/* ═══ 새 버전 자동 감지 (홈 화면 앱은 새로고침이 없어서 필요) ═══ */
+async function checkNewVersion() {
+  try {
+    const res = await fetch(location.pathname + '?nocache=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const html = await res.text();
+    const m = html.match(/APP_VERSION\s*=\s*'([^']+)'/);
+    if (m && m[1] !== APP_VERSION) $('updateBanner').classList.add('show');
+  } catch (e) { /* 오프라인 등 — 조용히 무시 */ }
+}
+function applyUpdate() {
+  location.replace(location.pathname + '?v=' + Date.now());
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') { checkNewVersion(); scheduleRefresh(); }
+});
+
 function checkUpdates() {
   let seen = null;
   try { seen = localStorage.getItem('matzip-seen-ver'); } catch(e) {}
@@ -761,6 +794,7 @@ function scheduleRefresh() {
 async function start() {
   if (!initSupabase()) return;
   checkUpdates();
+  checkNewVersion();
   await fetchAll();
   sb.channel('live-updates')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'places' }, scheduleRefresh)
@@ -954,8 +988,8 @@ function render() {
   if (ranked.length) {
     const medals = ['🥇','🥈','🥉'];
     $('podium').innerHTML = ranked.map((p,i) =>
-  `<span class="p-item">${medals[i]} <b>${esc(p.name)}</b></span>`
-).join('');
+      `<span class="p-item">${medals[i]} <b>${esc(p.name)}</b></span>`
+    ).join('');
     $('podium').style.display = 'flex';
   } else $('podium').style.display = 'none';
 
