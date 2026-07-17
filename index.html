@@ -85,6 +85,23 @@
   .stat.s-visited .num { color: var(--seal); }
   .stat.s-wish .num { color: var(--wish); }
   .stat.s-special .num { color: var(--gold); }
+  .total-line {
+    text-align: center; margin-top: 18px; font-size: .88rem; color: var(--ink-soft);
+    font-family: 'Gowun Batang', serif;
+  }
+  .total-line b { color: var(--seal); font-size: 1.05rem; }
+  /* 상태 칩: 줄바꿈 없이 가로 스크롤 */
+  .chips.scroll-x {
+    flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px;
+    scrollbar-width: none; -ms-overflow-style: none;
+  }
+  .chips.scroll-x::-webkit-scrollbar { display: none; }
+  .chips.scroll-x .chip { flex-shrink: 0; }
+  /* 가져오기 강조 버튼 */
+  .link-btn.accent {
+    background: var(--seal-soft); border-color: #f0c3bd; color: var(--seal-deep); font-weight: 600;
+  }
+  .link-btn.accent:hover { background: var(--seal); border-color: var(--seal); color: #fff; }
   .podium {
     max-width: 480px; margin: 10px auto 0; padding: 10px 16px;
     background: var(--gold-soft); border: 1px solid #ecd9a8; border-radius: 14px;
@@ -405,6 +422,7 @@
     </div>
   </header>
 
+  <div class="total-line" id="totalLine"></div>
   <div class="stats" id="stats"></div>
   <div class="podium" id="podium" style="display:none" onclick="showRanking()"></div>
 
@@ -413,15 +431,12 @@
       <span class="icon">🔍</span>
       <input type="text" id="search" placeholder="가게 이름 · 지역 · 메뉴로 찾기" oninput="render()">
     </div>
-    <div class="chip-group">
-      <span class="chip-label">상태</span>
-      <div class="chips" id="statusChips">
-        <button class="chip on" data-f="all" onclick="setFilter('all')">전체</button>
-        <button class="chip c-seal" data-f="visited" onclick="setFilter('visited')">도장 찍은 곳</button>
-        <button class="chip c-wish" data-f="wish" onclick="setFilter('wish')">가고 싶은 곳</button>
-        <button class="chip c-wish" data-f="again" onclick="setFilter('again')">💙 또 가자</button>
-        <button class="chip c-gold" data-f="special" onclick="setFilter('special')">특별한 날</button>
-      </div>
+    <div class="chips scroll-x" id="statusChips">
+      <button class="chip on" data-f="all" onclick="setFilter('all')">전체</button>
+      <button class="chip c-seal" data-f="visited" onclick="setFilter('visited')">도장 찍은 곳</button>
+      <button class="chip c-wish" data-f="wish" onclick="setFilter('wish')">가고 싶은 곳</button>
+      <button class="chip c-wish" data-f="again" onclick="setFilter('again')">💙 또 가자</button>
+      <button class="chip c-gold" data-f="special" onclick="setFilter('special')">특별한 날</button>
     </div>
     <div id="advFilters" style="display:none; flex-direction:column; gap:11px">
       <div class="chip-group" id="cityGroup" style="display:none">
@@ -439,7 +454,7 @@
     <div class="tools-row">
       <div style="display:flex; gap:6px">
         <button class="link-btn" id="advBtn" onclick="toggleAdv()">필터 ▾</button>
-        <button class="link-btn" onclick="openImport()">📋 가져오기</button>
+        <button class="link-btn accent" onclick="openImport()">📋 가져오기</button>
       </div>
       <select id="sort" onchange="render()">
         <option value="new">최근 추가순</option>
@@ -644,14 +659,19 @@
    ① 여기 두 줄만 채우면 돼!
    Supabase → Project Settings → API 에서 복사
    ═══════════════════════════════════════════ */
-const SUPABASE_URL = 'https://lnltkzlovnhcqqzzuqzv.supabase.co';       // 예: https://abcdefgh.supabase.co
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxubHRremxvdm5oY3Fxenp1cXp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5MTE0NzQsImV4cCI6MjA5OTQ4NzQ3NH0.NnMuZdxjLho72Y5Q1XRW7oqD0_NgrCNq21O6FwO3mhs'; // 예: eyJhbGciOi...
+const SUPABASE_URL = '여기에_프로젝트_URL';       // 예: https://abcdefgh.supabase.co
+const SUPABASE_ANON_KEY = '여기에_anon_public_키'; // 예: eyJhbGciOi...
 
 const CAT_EMOJI = {'한식':'🍚','중식':'🥟','일식':'🍣','양식':'🍝','분식':'🌶','고기':'🥩','회·해산물':'🐟','카페·디저트':'☕','술집':'🍶','기타':'🍽'};
 
 /* ═══ 업데이트 소식 (새 버전 배포할 때 여기에 추가) ═══ */
-const APP_VERSION = '2026.07.18-4';
+const APP_VERSION = '2026.07.18-5';
 const CHANGELOG = [
+  { ver: '2026.07.18 (5차)', items: [
+    '통계 위에 "우리의 지도에 N곳" 전체 개수가 보여요',
+    '상태 칩이 한 줄로 정리됐어요 (옆으로 밀어서 스크롤)',
+    '📋 가져오기 버튼이 눈에 잘 띄게 바뀌었어요',
+  ]},
   { ver: '2026.07.18 (4차)', items: [
     '새 버전이 나오면 위에 배너가 떠요 — 누르면 바로 업데이트 (홈 화면 앱도 OK)',
     '앱을 다시 열 때마다 데이터와 버전을 자동으로 확인해요',
@@ -975,6 +995,8 @@ function render() {
   const visited = db.places.filter(p=>p.status==='visited').length;
   const wish = db.places.filter(p=>p.status==='wish').length;
   const special = db.places.filter(p=>p.special).length;
+  $('totalLine').innerHTML = db.places.length
+    ? `우리의 지도에 <b>${db.places.length}</b>곳` : '';
   $('stats').innerHTML = `
     <div class="stat s-visited" onclick="setFilter('visited')"><div class="num">${visited}</div><div class="lbl">도장 찍은 곳</div></div>
     <div class="stat s-wish" onclick="setFilter('wish')"><div class="num">${wish}</div><div class="lbl">가고 싶은 곳</div></div>
