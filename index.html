@@ -85,6 +85,16 @@
   .stat.s-visited .num { color: var(--seal); }
   .stat.s-wish .num { color: var(--wish); }
   .stat.s-special .num { color: var(--gold); }
+  .podium {
+    max-width: 480px; margin: 10px auto 0; padding: 10px 16px;
+    background: var(--gold-soft); border: 1px solid #ecd9a8; border-radius: 14px;
+    display: flex; justify-content: center; align-items: center; gap: 6px 14px; flex-wrap: wrap;
+    font-size: .84rem; cursor: pointer; box-shadow: var(--shadow); transition: all .18s;
+  }
+  .podium:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
+  .podium .p-item { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); white-space: nowrap; }
+  .podium .p-item b { font-family: 'Gowun Batang', serif; }
+  .podium .p-star { color: var(--gold); font-size: .78rem; font-weight: 700; }
 
   /* ═══ 컨트롤 ═══ */
   .controls { margin-top: 20px; display: flex; flex-direction: column; gap: 11px; }
@@ -386,6 +396,7 @@
   </header>
 
   <div class="stats" id="stats"></div>
+  <div class="podium" id="podium" style="display:none" onclick="showRanking()"></div>
 
   <div class="controls">
     <div class="search-row">
@@ -628,8 +639,13 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const CAT_EMOJI = {'한식':'🍚','중식':'🥟','일식':'🍣','양식':'🍝','분식':'🌶','고기':'🥩','회·해산물':'🐟','카페·디저트':'☕','술집':'🍶','기타':'🍽'};
 
 /* ═══ 업데이트 소식 (새 버전 배포할 때 여기에 추가) ═══ */
-const APP_VERSION = '2026.07.18-2';
+const APP_VERSION = '2026.07.18-3';
 const CHANGELOG = [
+  { ver: '2026.07.18 (3차)', items: [
+    '통계 아래에 🥇🥈🥉 랭킹 Top 3가 항상 보여요 — 누르면 전체 랭킹으로 이동',
+    '접힌 카드의 별점이 평균 한 개 숫자로 깔끔해졌어요 (★ 4)',
+    '스탬프 원호 글자가 어떤 기기에서도 뒤틀리지 않게 고쳐졌어요',
+  ]},
   { ver: '2026.07.18 (2차)', items: [
     '보장맛집 스탬프에 우리 평균 별점만큼 별이 달려요 (별점 없으면 5개)',
     '정렬에서 🏆 별점 랭킹을 고르면 🥇🥈🥉 등수가 붙어요 (동점이면 방문 많은 곳이 위)',
@@ -808,6 +824,21 @@ function esc(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;',
 let openCards = new Set();
 let slamId = null;
 
+/* 원호 글자를 한 자씩 각도 계산해 배치 — 어떤 브라우저에서도 동일하게 렌더링 */
+function arcLetters(str, r, fs, color, bottom) {
+  const chars = [...str];
+  const adv = fs * 0.72 + 1.2;                    /* 글자 하나의 폭(자간 포함) */
+  const step = adv / r * (180 / Math.PI);         /* 글자당 각도 */
+  const total = step * (chars.length - 1);
+  return chars.map((ch, i) => {
+    if (ch === ' ') return '';
+    const angle = bottom ? (total / 2 - i * step) : (-total / 2 + i * step);
+    const y = bottom ? 50 + r : 50 - r;
+    return `<text x="50" y="${y}" text-anchor="middle" font-size="${fs}" font-weight="700" fill="${color}"
+      font-family="Helvetica, Arial, sans-serif" transform="rotate(${angle.toFixed(2)} 50 50)">${ch}</text>`;
+  }).join('');
+}
+
 function stampOf(p) {
   if (p.status !== 'visited') return { cls: 'wish', txt: '가보자' };
 
@@ -823,23 +854,13 @@ function stampOf(p) {
   else                  { color = '#77736c'; arcTop = 'VISITED';   main = '다녀옴';   icon = '✓'; }
 
   const date = (p.date || '').replace(/-/g, '.');
-  const uid = 'st' + String(p.id).replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
   const mainSize = main.length > 3 ? 15 : 18;
 
-  /* 위 원호: 왼→오 (윗변 통과) / 아래 원호: 왼→오 (아랫변 통과, sweep 0) → 글자가 똑바로 섬 */
   const svg = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" text-rendering="geometricPrecision">
-    <defs>
-      <path id="${uid}t" d="M 11,50 A 39,39 0 0 1 89,50"/>
-      <path id="${uid}b" d="M 6,50 A 44,44 0 0 0 94,50"/>
-    </defs>
     <circle cx="50" cy="50" r="46.5" fill="none" stroke="${color}" stroke-width="4"/>
     <circle cx="50" cy="50" r="33.5" fill="none" stroke="${color}" stroke-width="1.6"/>
-    <text font-size="10" font-weight="800" letter-spacing="1.6" fill="${color}" font-family="Helvetica, Arial, sans-serif">
-      <textPath href="#${uid}t" startOffset="50%" text-anchor="middle">${arcTop}</textPath>
-    </text>
-    <text font-size="9.5" font-weight="800" letter-spacing="1.6" fill="${color}" font-family="Helvetica, Arial, sans-serif">
-      <textPath href="#${uid}b" startOffset="50%" text-anchor="middle">GOOD PLACE</textPath>
-    </text>
+    ${arcLetters(arcTop, 37, 9.5, color, false)}
+    ${arcLetters('GOOD PLACE', 43.5, 9, color, true)}
     <text x="50" y="39" text-anchor="middle" font-size="${iconSize}" font-weight="800" letter-spacing="${iconSpacing}" fill="${color}">${icon}</text>
     <text x="50" y="58" text-anchor="middle" font-size="${mainSize}" font-weight="800" fill="${color}"
       font-family="'Gowun Batang', serif" letter-spacing="-0.5">${main}</text>
@@ -850,10 +871,8 @@ function stampOf(p) {
 }
 
 function bothStars(p) {
-  const a = p.rateA, b = p.rateB;
-  if (a && b) return `★ ${a}·${b}`;
-  if (a || b) return `★ ${a || b}`;
-  return '';
+  const a = avg(p);
+  return a ? `★ ${Math.round(a)}` : '';
 }
 
 function cardHTML(p, rank) {
@@ -926,6 +945,19 @@ function render() {
     <div class="stat s-visited" onclick="setFilter('visited')"><div class="num">${visited}</div><div class="lbl">도장 찍은 곳</div></div>
     <div class="stat s-wish" onclick="setFilter('wish')"><div class="num">${wish}</div><div class="lbl">가고 싶은 곳</div></div>
     <div class="stat s-special" onclick="setFilter('special')"><div class="num">${special}</div><div class="lbl">특별한 날</div></div>`;
+
+  /* 랭킹 Top 3 포디움 */
+  const ranked = db.places
+    .filter(p => p.status==='visited' && avg(p) > 0)
+    .sort((a,b)=> avg(b)-avg(a) || (b.visits||0)-(a.visits||0) || a.name.localeCompare(b.name,'ko'))
+    .slice(0, 3);
+  if (ranked.length) {
+    const medals = ['🥇','🥈','🥉'];
+    $('podium').innerHTML = ranked.map((p,i) =>
+      `<span class="p-item">${medals[i]} <b>${esc(p.name)}</b> <span class="p-star">★${Math.round(avg(p))}</span></span>`
+    ).join('');
+    $('podium').style.display = 'flex';
+  } else $('podium').style.display = 'none';
 
   const cities = [...new Set(db.places.map(p=>p.city).filter(Boolean))].sort();
   $('cityGroup').style.display = cities.length ? 'flex' : 'none';
@@ -1005,6 +1037,12 @@ function setFilter(f) {
   render();
 }
 let advOpen = false;
+function showRanking() {
+  $('sort').value = 'rating';
+  filter = 'visited';
+  document.querySelectorAll('#statusChips .chip').forEach(c=>c.classList.toggle('on', c.dataset.f==='visited'));
+  render();
+}
 function toggleAdv() {
   advOpen = !advOpen;
   $('advFilters').style.display = advOpen ? 'flex' : 'none';
