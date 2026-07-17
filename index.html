@@ -159,6 +159,14 @@
   }
   .thumb img { width: 100%; height: 100%; object-fit: cover; }
   .card-main { flex: 1; min-width: 0; padding-right: 74px; }
+  .rank {
+    display: inline-block; font-size: .95rem; margin-right: 5px; vertical-align: 1px;
+  }
+  .rank.num {
+    font-size: .72rem; font-weight: 700; color: #9a7420;
+    background: var(--gold-soft); border: 1px solid #ecd9a8; border-radius: 999px;
+    padding: 1px 8px; vertical-align: 3px; font-family: 'Noto Sans KR', sans-serif;
+  }
   .card h3 {
     font-family: 'Gowun Batang', serif; font-size: 1.16rem; line-height: 1.3;
     word-break: keep-all;
@@ -171,12 +179,7 @@
     width: 68px; height: 68px; z-index: 2;
     display: flex; align-items: center; justify-content: center;
     transform: rotate(-8deg);
-  }
-  /* 잉크 번짐 질감 (SVG 도장 전체에 적용) */
-  .stamp.ink {
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='68' height='68'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='2'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.45 0.8'/%3E%3C/filter%3E%3Crect width='68' height='68' filter='url(%23g)'/%3E%3C/svg%3E");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='68' height='68'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='2'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.45 0.8'/%3E%3C/filter%3E%3Crect width='68' height='68' filter='url(%23g)'/%3E%3C/svg%3E");
-    -webkit-mask-size: cover; mask-size: cover;
+    opacity: .95;
   }
   .stamp svg { width: 100%; height: 100%; }
   .stamp.wish {
@@ -333,6 +336,29 @@
     box-shadow: var(--shadow-lift);
   }
   .toast.show { opacity: 1; }
+  .app-foot {
+    text-align: center; margin-top: 40px; font-size: .78rem; color: #c9bfae;
+    font-family: 'Gowun Batang', serif;
+  }
+  .app-foot button {
+    background: none; border: none; font-family: inherit; font-size: .78rem;
+    color: var(--ink-soft); cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+    position: relative;
+  }
+  .app-foot button.new::after {
+    content: ''; position: absolute; top: -2px; right: -8px;
+    width: 6px; height: 6px; border-radius: 50%; background: var(--seal);
+  }
+  .update-list { list-style: none; }
+  .update-list .ver {
+    font-family: 'Gowun Batang', serif; font-weight: 700; font-size: .92rem;
+    margin: 14px 0 6px; color: var(--ink);
+  }
+  .update-list .ver:first-child { margin-top: 0; }
+  .update-list .item {
+    font-size: .87rem; color: var(--ink-soft); line-height: 1.65; padding-left: 14px; position: relative;
+  }
+  .update-list .item::before { content: ''; position: absolute; left: 2px; top: .62em; width: 5px; height: 5px; border-radius: 50%; background: var(--seal); opacity: .6; }
   .loading { text-align: center; padding: 90px 0; color: var(--ink-soft); font-size: .9rem; }
   .loading .mark { font-size: 2rem; margin-bottom: 10px; animation: sway 1.6s ease-in-out infinite; display:inline-block; }
   @keyframes sway { 0%,100%{transform:rotate(-6deg)} 50%{transform:rotate(6deg)} }
@@ -397,7 +423,7 @@
       <select id="sort" onchange="render()">
         <option value="new">최근 추가순</option>
         <option value="region">지역별 묶어보기</option>
-        <option value="rating">별점 높은순</option>
+        <option value="rating">🏆 별점 랭킹</option>
         <option value="date">방문 날짜순</option>
         <option value="name">이름순</option>
       </select>
@@ -406,6 +432,11 @@
 
   <div class="list" id="list">
     <div class="loading"><span class="mark">🗺</span><br>지도를 펼치는 중…</div>
+  </div>
+
+  <div class="app-foot">
+    맛집 大東輿地圖 ·
+    <button id="updateBtn" onclick="openUpdates()">새 소식</button>
   </div>
 </div>
 
@@ -558,6 +589,17 @@
   </div>
 </div>
 
+<!-- 업데이트 소식 모달 -->
+<div class="overlay" id="updateOverlay" onclick="if(event.target===this)closeUpdates()">
+  <div class="modal">
+    <h2>새 소식</h2>
+    <ul class="update-list" id="updateList"></ul>
+    <div class="modal-actions">
+      <button class="btn primary" onclick="closeUpdates()">확인</button>
+    </div>
+  </div>
+</div>
+
 <!-- 이름 설정 모달 -->
 <div class="overlay" id="namesOverlay" onclick="if(event.target===this)closeNames()">
   <div class="modal">
@@ -584,6 +626,47 @@ const SUPABASE_URL = 'https://lnltkzlovnhcqqzzuqzv.supabase.co';       // 예: h
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxubHRremxvdm5oY3Fxenp1cXp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5MTE0NzQsImV4cCI6MjA5OTQ4NzQ3NH0.NnMuZdxjLho72Y5Q1XRW7oqD0_NgrCNq21O6FwO3mhs'; // 예: eyJhbGciOi...
 
 const CAT_EMOJI = {'한식':'🍚','중식':'🥟','일식':'🍣','양식':'🍝','분식':'🌶','고기':'🥩','회·해산물':'🐟','카페·디저트':'☕','술집':'🍶','기타':'🍽'};
+
+/* ═══ 업데이트 소식 (새 버전 배포할 때 여기에 추가) ═══ */
+const APP_VERSION = '2026.07.18-2';
+const CHANGELOG = [
+  { ver: '2026.07.18 (2차)', items: [
+    '보장맛집 스탬프에 우리 평균 별점만큼 별이 달려요 (별점 없으면 5개)',
+    '정렬에서 🏆 별점 랭킹을 고르면 🥇🥈🥉 등수가 붙어요 (동점이면 방문 많은 곳이 위)',
+  ]},
+  { ver: '2026.07.18', items: [
+    '각자 한줄평을 남길 수 있어요 (수정에서 입력)',
+    '접힌 카드에서도 두 사람 별점이 나란히 보여요 (★ 4·5)',
+    '지역·종류 필터가 "필터" 버튼 안으로 정리됐어요',
+    '가져오기가 자유로워졌어요 — 쉼표·탭·이름만·네이버 리스트 통째로 다 인식',
+    '스탬프가 더 선명해졌어요',
+  ]},
+  { ver: '2026.07.13', items: [
+    '여권 스타일 스탬프 (방문 날짜 포함)',
+    '방문 횟수 기록 — 2회 "또 왔네", 3회 이상 "맛집 보장" 승격',
+    '"또 가고 싶은 집" 표시와 필터',
+    '카드를 눌러 접고 펼치기',
+  ]},
+];
+function openUpdates() {
+  $('updateList').innerHTML = CHANGELOG.map(v =>
+    `<li class="ver">${v.ver}</li>` + v.items.map(i=>`<li class="item">${i}</li>`).join('')
+  ).join('');
+  $('updateOverlay').classList.add('show');
+  try { localStorage.setItem('matzip-seen-ver', APP_VERSION); } catch(e) {}
+  $('updateBtn').classList.remove('new');
+}
+function closeUpdates(){ $('updateOverlay').classList.remove('show'); }
+function checkUpdates() {
+  let seen = null;
+  try { seen = localStorage.getItem('matzip-seen-ver'); } catch(e) {}
+  if (seen !== APP_VERSION) {
+    $('updateBtn').classList.add('new');
+    if (seen) openUpdates(); /* 이전 버전을 쓰던 사람에게만 자동으로 보여줌 */
+    else { try { localStorage.setItem('matzip-seen-ver', APP_VERSION); } catch(e) {} }
+  }
+}
+
 const GYEONGGI = /(수원|성남|고양|용인|부천|안산|안양|남양주|화성|평택|의정부|시흥|파주|김포|광명|광주시|군포|하남|오산|이천|안성|의왕|양주|구리|포천|동두천|과천|여주|양평|가평|연천)/;
 let db = { places: [], nameA: '나', nameB: '너' };
 let filter = 'all';
@@ -661,6 +744,7 @@ function scheduleRefresh() {
 }
 async function start() {
   if (!initSupabase()) return;
+  checkUpdates();
   await fetchAll();
   sb.channel('live-updates')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'places' }, scheduleRefresh)
@@ -728,33 +812,38 @@ function stampOf(p) {
   if (p.status !== 'visited') return { cls: 'wish', txt: '가보자' };
 
   const visits = p.visits || 1;
-  let color, arcTop, main, icon;
-  if (visits >= 3)      { color = '#c0392b'; arcTop = 'CERTIFIED'; main = '맛집 보장'; icon = '★'; }
+  let color, arcTop, main, icon, iconSize = 15, iconSpacing = 0;
+  if (visits >= 3) {
+    color = '#c0392b'; arcTop = 'CERTIFIED'; main = '맛집 보장';
+    /* 둘의 평균 별점만큼 별이 달림 (별점 없으면 5개) */
+    const n = avg(p) ? Math.round(avg(p)) : 5;
+    icon = '★'.repeat(n); iconSize = 8.5; iconSpacing = 0.5;
+  }
   else if (visits === 2){ color = '#3f6fa8'; arcTop = 'REVISITED'; main = '또 왔네';  icon = '⟳'; }
   else                  { color = '#77736c'; arcTop = 'VISITED';   main = '다녀옴';   icon = '✓'; }
 
   const date = (p.date || '').replace(/-/g, '.');
   const uid = 'st' + String(p.id).replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
-  const mainSize = main.length > 3 ? 14 : 16.5;
+  const mainSize = main.length > 3 ? 15 : 18;
 
-  /* 위쪽 원호: 왼→오 (윗변 통과) / 아래 원호: 왼→오 (아랫변 통과, sweep 0) → 글자가 똑바로 섬 */
-  const svg = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  /* 위 원호: 왼→오 (윗변 통과) / 아래 원호: 왼→오 (아랫변 통과, sweep 0) → 글자가 똑바로 섬 */
+  const svg = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" text-rendering="geometricPrecision">
     <defs>
-      <path id="${uid}t" d="M 12,50 A 38,38 0 0 1 88,50"/>
-      <path id="${uid}b" d="M 5.5,50 A 44.5,44.5 0 0 0 94.5,50"/>
+      <path id="${uid}t" d="M 11,50 A 39,39 0 0 1 89,50"/>
+      <path id="${uid}b" d="M 6,50 A 44,44 0 0 0 94,50"/>
     </defs>
-    <circle cx="50" cy="50" r="47" fill="none" stroke="${color}" stroke-width="3.6"/>
-    <circle cx="50" cy="50" r="34" fill="none" stroke="${color}" stroke-width="1.5"/>
-    <text font-size="9.5" font-weight="700" letter-spacing="2.4" fill="${color}" font-family="Arial, sans-serif">
+    <circle cx="50" cy="50" r="46.5" fill="none" stroke="${color}" stroke-width="4"/>
+    <circle cx="50" cy="50" r="33.5" fill="none" stroke="${color}" stroke-width="1.6"/>
+    <text font-size="10" font-weight="800" letter-spacing="1.6" fill="${color}" font-family="Helvetica, Arial, sans-serif">
       <textPath href="#${uid}t" startOffset="50%" text-anchor="middle">${arcTop}</textPath>
     </text>
-    <text font-size="9" font-weight="700" letter-spacing="2.2" fill="${color}" font-family="Arial, sans-serif">
+    <text font-size="9.5" font-weight="800" letter-spacing="1.6" fill="${color}" font-family="Helvetica, Arial, sans-serif">
       <textPath href="#${uid}b" startOffset="50%" text-anchor="middle">GOOD PLACE</textPath>
     </text>
-    <text x="50" y="38" text-anchor="middle" font-size="14" font-weight="700" fill="${color}">${icon}</text>
-    <text x="50" y="56.5" text-anchor="middle" font-size="${mainSize}" font-weight="800" fill="${color}"
-      font-family="'Gowun Batang', serif">${main}</text>
-    ${date ? `<text x="50" y="68" text-anchor="middle" font-size="7.5" letter-spacing=".8" fill="${color}" font-family="Arial, sans-serif">${date}</text>` : ''}
+    <text x="50" y="39" text-anchor="middle" font-size="${iconSize}" font-weight="800" letter-spacing="${iconSpacing}" fill="${color}">${icon}</text>
+    <text x="50" y="58" text-anchor="middle" font-size="${mainSize}" font-weight="800" fill="${color}"
+      font-family="'Gowun Batang', serif" letter-spacing="-0.5">${main}</text>
+    ${date ? `<text x="50" y="70" text-anchor="middle" font-size="7.5" font-weight="700" letter-spacing=".5" fill="${color}" font-family="Helvetica, Arial, sans-serif">${date}</text>` : ''}
   </svg>`;
 
   return { cls: 'ink', txt: svg };
@@ -767,11 +856,13 @@ function bothStars(p) {
   return '';
 }
 
-function cardHTML(p) {
+function cardHTML(p, rank) {
   const st = stampOf(p);
   const slam = p.id === slamId ? ' slam' : '';
   const open = openCards.has(p.id) ? ' open' : '';
   const bs = p.status==='visited' ? bothStars(p) : '';
+  const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':null;
+  const rankTag = rank ? (medal ? `<span class="rank">${medal}</span>` : `<span class="rank num">${rank}위</span>`) : '';
   return `
     <div class="card ${p.special?'special':''}${open}" onclick="toggleCard(event,'${p.id}')">
       ${p.special?`<div class="special-tag">💛 ${esc(p.specialNote||'특별한 날')}</div>`:''}
@@ -779,7 +870,7 @@ function cardHTML(p) {
       <div class="card-body">
         <div class="thumb">${p.photo?`<img src="${p.photo}" alt="">`:(CAT_EMOJI[p.cat]||'🍽')}</div>
         <div class="card-main">
-          <h3>${esc(p.name)}</h3>
+          <h3>${rankTag}${esc(p.name)}</h3>
           <div class="meta">
             <span>📍 ${esc(p.city)}${p.region?' · '+esc(p.region):''}</span>
             <span class="badge">${esc(p.cat)}</span>
@@ -867,9 +958,19 @@ function render() {
 
   const sort = $('sort').value;
   if (sort === 'new') items.sort((a,b)=>b.createdAt-a.createdAt);
-  if (sort === 'rating') items.sort((a,b)=>avg(b)-avg(a));
+  if (sort === 'rating') items.sort((a,b)=> avg(b)-avg(a) || (b.visits||0)-(a.visits||0) || a.name.localeCompare(b.name,'ko'));
   if (sort === 'name') items.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
   if (sort === 'date') items.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+
+  /* 별점 높은순일 때만 랭킹 부여 (별점 있는 다녀온 곳만) */
+  let rankMap = null;
+  if (sort === 'rating') {
+    rankMap = {};
+    let r = 0;
+    for (const p of items) {
+      if (p.status === 'visited' && avg(p) > 0) rankMap[p.id] = ++r;
+    }
+  }
 
   if (!items.length) {
     $('list').innerHTML = db.places.length
@@ -894,7 +995,7 @@ function render() {
     return;
   }
 
-  $('list').innerHTML = items.map(cardHTML).join('');
+  $('list').innerHTML = items.map(p => cardHTML(p, rankMap ? rankMap[p.id] : null)).join('');
 }
 
 /* ── 필터 ── */
