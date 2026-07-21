@@ -499,6 +499,7 @@
     <div class="field">
       <label>가게 이름 *</label>
       <input type="text" id="fName" placeholder="예) 을지로 골목식당">
+      <button type="button" class="btn" id="autoFillBtn" style="margin-top:7px; display:none" onclick="autoFill()">🔍 이름으로 지역·종류 자동 채우기</button>
     </div>
     <div class="row2">
       <div class="field" style="flex:0.7">
@@ -659,14 +660,51 @@
    ① 여기 두 줄만 채우면 돼!
    Supabase → Project Settings → API 에서 복사
    ═══════════════════════════════════════════ */
-const SUPABASE_URL = 'https://lnltkzlovnhcqqzzuqzv.supabase.co';       // 예: https://abcdefgh.supabase.co
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxubHRremxvdm5oY3Fxenp1cXp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5MTE0NzQsImV4cCI6MjA5OTQ4NzQ3NH0.NnMuZdxjLho72Y5Q1XRW7oqD0_NgrCNq21O6FwO3mhs'; // 예: eyJhbGciOi...
+const SUPABASE_URL = '여기에_프로젝트_URL';       // 예: https://abcdefgh.supabase.co
+const SUPABASE_ANON_KEY = '여기에_anon_public_키'; // 예: eyJhbGciOi...
+
+/* ═══ (선택) 카카오 JavaScript 키 — 넣으면 가져오기·추가할 때 지역/종류 자동 조회 ═══
+   developers.kakao.com → 내 애플리케이션 → 앱 만들기 → 플랫폼(Web)에 사이트 주소 등록 → JavaScript 키 복사 */
+const KAKAO_JS_KEY = '';
+
+let kakaoReady = false;
+function initKakao() {
+  if (!KAKAO_JS_KEY) return;
+  const s = document.createElement('script');
+  s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&libraries=services&autoload=false`;
+  s.onload = () => kakao.maps.load(() => { kakaoReady = true; });
+  document.head.appendChild(s);
+}
+/* 가게 이름으로 카카오에서 주소·종류 조회 */
+function kakaoLookup(name) {
+  return new Promise(resolve => {
+    if (!kakaoReady) return resolve(null);
+    try {
+      new kakao.maps.services.Places().keywordSearch(name, (data, status) => {
+        if (status !== kakao.maps.services.Status.OK || !data.length) return resolve(null);
+        const d = data[0];
+        const addr = d.address_name || d.road_address_name || '';
+        const tokens = addr.split(/\s+/);
+        resolve({
+          city: detectCity(addr),
+          region: tokens.slice(1).filter(t => !/\d/.test(t)).slice(0, 2).join(' '),
+          cat: detectCat((d.category_name || '') + ' ' + name),
+          fullName: d.place_name || name
+        });
+      });
+    } catch (e) { resolve(null); }
+  });
+}
 
 const CAT_EMOJI = {'한식':'🍚','중식':'🥟','일식':'🍣','양식':'🍝','분식':'🌶','고기':'🥩','회·해산물':'🐟','카페·디저트':'☕','술집':'🍶','기타':'🍽'};
 
 /* ═══ 업데이트 소식 (새 버전 배포할 때 여기에 추가) ═══ */
-const APP_VERSION = '2026.07.18-5';
+const APP_VERSION = '2026.07.18-6';
 const CHANGELOG = [
+  { ver: '2026.07.18 (6차)', items: [
+    '이름만 넣어도 지역·종류가 자동으로 채워져요 (카카오 검색 연동)',
+    '수정 화면에 🔍 자동 채우기 버튼이 생겼어요',
+  ]},
   { ver: '2026.07.18 (5차)', items: [
     '통계 위에 "우리의 지도에 N곳" 전체 개수가 보여요',
     '상태 칩이 한 줄로 정리됐어요 (옆으로 밀어서 스크롤)',
@@ -811,8 +849,21 @@ function scheduleRefresh() {
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(fetchAll, 300);
 }
+async function autoFill() {
+  const name = $('fName').value.trim();
+  if (!name) { toast('가게 이름을 먼저 입력해 주세요'); return; }
+  toast('🔍 찾는 중…');
+  const k = await kakaoLookup(name);
+  if (!k) { toast('검색 결과가 없어요 — 직접 입력해 주세요'); return; }
+  $('fCity').value = ['서울','경기','인천','강원','충청','전라','경상','제주'].includes(k.city) ? k.city : '기타';
+  $('fRegion').value = k.region;
+  if (k.cat !== '기타') $('fCat').value = k.cat;
+  toast(`📍 ${k.city} ${k.region} 으로 채웠어요`);
+}
+
 async function start() {
   if (!initSupabase()) return;
+  initKakao();
   checkUpdates();
   checkNewVersion();
   await fetchAll();
@@ -1164,6 +1215,7 @@ function openForm(id) {
   $('fSpecial').checked = !!p?.special;
   $('fSpecialNote').value = p?.specialNote || '';
   $('specialNoteField').style.display = p?.special ? 'block' : 'none';
+  $('autoFillBtn').style.display = KAKAO_JS_KEY ? 'inline-flex' : 'none';
   $('fAgain').checked = !!p?.again;
   formVisits = p?.visits || 1;
   $('visitsNum').textContent = formVisits;
@@ -1350,14 +1402,20 @@ async function runImport() {
     if (!e.name) continue;
     if (db.places.some(p=>p.name===e.name)) continue;
     if (rows.some(r=>r.name===e.name)) continue;
+    let city = detectCity(e.cityRaw || e.region || e.name);
+    let region = cleanRegion(e.region);
+    let cat = detectCat(e.name + ' ' + e.memo);
+    /* 지역 정보가 없으면 카카오에서 자동 조회 */
+    if (!region && kakaoReady) {
+      toast(`🔍 ${e.name} 위치 찾는 중…`);
+      const k = await kakaoLookup(e.name);
+      if (k) { city = k.city; region = k.region; if (cat==='기타') cat = k.cat; }
+    }
     rows.push({
-      name: e.name,
-      city: detectCity(e.cityRaw || e.region),
-      region: cleanRegion(e.region),
+      name: e.name, city, region,
       memo: e.memo,
       naver_url: e.naverUrl || '',
-      cat: detectCat(e.name + ' ' + e.memo),
-      status: 'wish'
+      cat, status: 'wish'
     });
   }
   if (!rows.length) { toast('새로 추가할 곳이 없어요'); return; }
